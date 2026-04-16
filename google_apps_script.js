@@ -78,6 +78,7 @@ function doGet(e) {
       case 'results': result = getResults(); break;
       case 'history': result = getHistory(); break;
       case 'weights': result = W; break;
+      case 'verify_discord': result = verifyDiscord(e.parameter.discord_id); break;
       default: result = { error: 'Unknown action: ' + action };
     }
   } catch (err) {
@@ -376,4 +377,24 @@ function archiveWeek(data) {
   });
 
   return { ok: true, archived: results.length };
+}
+
+// ════════════════════════════════════════════════════
+//  DISCORD-ZUGRIFFSKONTROLLE
+// ════════════════════════════════════════════════════
+
+// Zugriff-Sheet: A=Discord-ID, B=Name
+function verifyDiscord(discordId) {
+  const ws = getSheet('Zugriff');
+  if (!ws) return { ok: false, error: 'Zugriff-Sheet fehlt' };
+  const lastRow = ws.getLastRow();
+  if (lastRow < 2) return { ok: false, error: 'Keine Eintr\u00e4ge' };
+
+  const data = ws.getRange(2, 1, lastRow - 1, 2).getValues();
+  const entry = data.find(r => String(r[0]).trim() === String(discordId).trim());
+
+  if (entry) {
+    return { ok: true, name: entry[1] };
+  }
+  return { ok: false, error: 'Kein Zugriff' };
 }
