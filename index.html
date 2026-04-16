@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>INY Ranking</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400;500;600&display=swap');
+
+:root {
+  --bg: #0c0e14;
+  --card: #141720;
+  --card2: #1c2030;
+  --line: rgba(255,255,255,0.07);
+  --line2: rgba(255,255,255,0.13);
+  --gold: #f0a500;
+  --gold2: #ffd060;
+  --red: #e05545;
+  --green: #2ecb7a;
+  --blue: #4a9eff;
+  --purple: #9b6dff;
+  --text: #dde1ec;
+  --soft: #7a8498;
+  --softer: #3e4558;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px; min-height: 100vh; }
+
+/* ── NAV ── */
+nav {
+  background: var(--card);
+  border-bottom: 1px solid var(--line);
+  height: 56px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 1.5rem;
+  position: sticky; top: 0; z-index: 100;
+}
+.logo { font-family: 'Rajdhani', sans-serif; font-size: 22px; font-weight: 700; letter-spacing: 4px; color: var(--gold); }
+.logo em { color: var(--text); font-style: normal; }
+.tabs { display: flex; gap: 4px; background: var(--card2); border-radius: 8px; padding: 3px; }
+.tab { padding: 5px 18px; font-size: 13px; font-weight: 500; border: none; border-radius: 6px; background: none; color: var(--soft); cursor: pointer; transition: all 0.15s; font-family: 'Inter', sans-serif; }
+.tab.active { background: var(--card); color: var(--text); }
+.kw-wrap { display: flex; align-items: center; gap: 6px; background: var(--card2); border: 1px solid var(--line2); border-radius: 8px; padding: 5px 12px; }
+.kw-wrap label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--soft); }
+.kw-wrap input { background: none; border: none; color: var(--gold); font-family: 'Rajdhani', sans-serif; font-size: 20px; font-weight: 700; width: 42px; text-align: center; outline: none; }
+
+/* ── PAGES ── */
+.page { display: none; padding: 1.25rem 1.5rem; max-width: 1400px; margin: 0 auto; }
+.page.active { display: block; }
+
+/* ── STAT CARDS ── */
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 1.25rem; }
+.stat { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+.stat-label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--soft); margin-bottom: 6px; }
+.stat-num { font-family: 'Rajdhani', sans-serif; font-size: 36px; font-weight: 700; line-height: 1; }
+.stat-num.g { color: var(--gold); } .stat-num.r { color: var(--red); }
+.stat-num.gr { color: var(--green); } .stat-num.b { color: var(--blue); }
+.stat-sub { font-size: 11px; color: var(--soft); margin-top: 3px; }
+
+/* ── PROGRESS ── */
+.prog { margin-bottom: 1.25rem; }
+.prog-top { display: flex; justify-content: space-between; font-size: 12px; color: var(--soft); margin-bottom: 5px; }
+.prog-bar { height: 5px; background: var(--card2); border-radius: 99px; overflow: hidden; }
+.prog-fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold2)); border-radius: 99px; transition: width 0.4s; }
+
+/* ── PANELS ── */
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.panel { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
+.panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.panel-title { font-family: 'Rajdhani', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--soft); }
+.panel-sub { font-size: 11px; color: var(--softer); }
+
+/* ── WARN LIST ── */
+.warn-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); }
+.warn-row:last-child { border-bottom: none; }
+.avatar { width: 30px; height: 30px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-family: 'Rajdhani', sans-serif; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+.warn-name { font-size: 13px; font-weight: 500; flex: 1; }
+.tags { display: flex; gap: 4px; flex-wrap: wrap; }
+.tag { font-size: 10px; padding: 2px 7px; border-radius: 4px; }
+.tag.r { background: rgba(224,85,69,0.15); color: #f09080; border: 1px solid rgba(224,85,69,0.3); }
+.tag.g { background: rgba(46,203,122,0.12); color: #70e0a0; border: 1px solid rgba(46,203,122,0.25); }
+.tag.a { background: rgba(240,165,0,0.12); color: var(--gold); border: 1px solid rgba(240,165,0,0.3); }
+.tag.b { background: rgba(74,158,255,0.12); color: #80b8ff; border: 1px solid rgba(74,158,255,0.25); }
+
+/* ── TOP LIST ── */
+.top-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); }
+.top-row:last-child { border-bottom: none; }
+.top-pos { font-family: 'Rajdhani', sans-serif; font-size: 15px; font-weight: 700; color: var(--soft); width: 22px; text-align: center; }
+.p1 { color: var(--gold); } .p2 { color: #b0bec5; } .p3 { color: #bf8a50; }
+.top-name { flex: 1; font-size: 13px; font-weight: 500; }
+.rank-badge { font-family: 'Rajdhani', sans-serif; font-size: 12px; font-weight: 700; padding: 2px 9px; border-radius: 5px; }
+.rb1 { background: rgba(240,165,0,0.15); color: var(--gold); border: 1px solid rgba(240,165,0,0.3); }
+.rb2 { background: rgba(46,203,122,0.12); color: var(--green); border: 1px solid rgba(46,203,122,0.25); }
+.rb3 { background: rgba(74,158,255,0.12); color: var(--blue); border: 1px solid rgba(74,158,255,0.25); }
+.rb4 { background: rgba(224,85,69,0.12); color: var(--red); border: 1px solid rgba(224,85,69,0.25); }
+.rb5 { background: rgba(155,109,255,0.12); color: var(--purple); border: 1px solid rgba(155,109,255,0.25); }
+
+/* ── RDIST ── */
+.rdist { display: flex; gap: 8px; align-items: flex-end; height: 72px; }
+.rdist-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.rdist-bar { width: 100%; border-radius: 4px 4px 0 0; min-height: 4px; transition: height 0.4s; }
+.rdist-n { font-size: 11px; color: var(--soft); }
+.rdist-l { font-family: 'Rajdhani', sans-serif; font-size: 12px; font-weight: 700; color: var(--soft); }
+
+/* ── BAR CHART ── */
+.bars { display: flex; flex-direction: column; gap: 8px; }
+.bar-row { display: flex; align-items: center; gap: 10px; }
+.bar-lbl { font-size: 11px; color: var(--soft); width: 110px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar-track { flex: 1; height: 7px; background: var(--card2); border-radius: 99px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 99px; transition: width 0.5s; }
+.bar-n { font-size: 11px; font-family: 'Rajdhani', sans-serif; font-weight: 700; color: var(--soft); width: 20px; text-align: right; }
+
+/* ── RANKING TABLE ── */
+.filter-row { display: flex; gap: 5px; flex-wrap: wrap; }
+.flt { font-size: 11px; padding: 4px 11px; border-radius: 5px; border: 1px solid var(--line2); background: none; color: var(--soft); cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.15s; white-space: nowrap; }
+.flt.on { background: var(--card2); color: var(--text); border-color: var(--line2); }
+.flt:hover:not(.on) { color: var(--text); }
+.rtable { width: 100%; border-collapse: collapse; font-size: 13px; }
+.rtable th { text-align: left; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--soft); font-weight: 600; padding: 7px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.rtable td { padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.rtable tr:last-child td { border-bottom: none; }
+.rtable tbody tr:hover td { background: var(--card2); }
+.rtable tr.dim td { opacity: 0.38; }
+.t-up { color: var(--green); font-weight: 600; }
+.t-dn { color: var(--red); font-weight: 600; }
+.t-eq { color: var(--softer); }
+.sdot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; }
+.sd-ok { background: var(--green); } .sd-warn { background: var(--red); } .sd-mis { background: var(--softer); }
+
+/* ── EINGABE ── */
+.search-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 1rem; }
+.search-input { background: var(--card); border: 1px solid var(--line2); border-radius: 8px; color: var(--text); font-size: 14px; padding: 8px 14px; outline: none; width: 240px; font-family: 'Inter', sans-serif; }
+.search-input:focus { border-color: var(--gold); }
+.search-input::placeholder { color: var(--soft); }
+.list-counter { font-size: 12px; color: var(--soft); margin-left: 8px; }
+
+/* ── INLINE EDITOR ── */
+.editor-wrap {
+  display: none;
+  background: var(--card);
+  border: 1px solid var(--gold);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+.editor-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+.editor-name { font-family: 'Rajdhani', sans-serif; font-size: 20px; font-weight: 700; color: var(--gold); }
+.editor-close { background: none; border: none; color: var(--soft); cursor: pointer; font-size: 20px; padding: 2px 8px; border-radius: 5px; line-height: 1; }
+.editor-close:hover { color: var(--red); }
+
+/* Rank selector */
+.rank-selector { display: flex; gap: 8px; margin-bottom: 1rem; }
+.rk-btn {
+  flex: 1; padding: 8px 4px; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--card2);
+  cursor: pointer; transition: all 0.15s; text-align: center;
+}
+.rk-btn:hover:not(:disabled) { border-color: var(--gold); }
+.rk-btn.on { background: var(--gold); border-color: var(--gold); }
+.rk-btn:disabled { opacity: 0.28; cursor: not-allowed; }
+.rk-num { font-family: 'Rajdhani', sans-serif; font-size: 20px; font-weight: 700; color: var(--text); line-height: 1; }
+.rk-btn.on .rk-num { color: #000; }
+.rk-lbl { font-size: 10px; color: var(--soft); margin-top: 2px; }
+.rk-btn.on .rk-lbl { color: rgba(0,0,0,0.6); }
+
+.fixed-note { display: none; font-size: 12px; color: var(--gold); padding: 6px 10px; background: rgba(240,165,0,0.08); border: 1px solid rgba(240,165,0,0.2); border-radius: 6px; margin-bottom: 0.75rem; }
+
+/* Flag categories */
+.flag-cats { display: flex; flex-direction: column; gap: 8px; margin-bottom: 1rem; }
+.flag-cat { border-radius: 8px; padding: 10px 12px; }
+.flag-cat-title { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; font-weight: 600; margin-bottom: 8px; }
+.flag-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+.flag-btn {
+  padding: 5px 13px; font-size: 12px; border-radius: 6px;
+  border: 1px solid var(--line); background: var(--card2);
+  color: var(--soft); cursor: pointer; transition: all 0.12s;
+  font-family: 'Inter', sans-serif; font-weight: 500;
+}
+.flag-btn:hover { color: var(--text); border-color: var(--line2); }
+
+.save-btn {
+  width: 100%; padding: 11px; font-family: 'Rajdhani', sans-serif;
+  font-size: 16px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+  background: var(--gold); color: #000; border: none; border-radius: 8px;
+  cursor: pointer; transition: background 0.15s;
+}
+.save-btn:hover { background: var(--gold2); }
+
+/* Member list */
+.member-list { display: flex; flex-direction: column; gap: 4px; }
+.member-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px; background: var(--card);
+  border: 1px solid var(--line); border-radius: 8px;
+  cursor: pointer; transition: all 0.12s;
+}
+.member-row:hover { background: var(--card2); border-color: var(--line2); }
+.member-row.is-open { border-color: var(--gold); background: var(--card2); }
+.m-status { font-size: 13px; width: 14px; flex-shrink: 0; }
+.m-name { font-size: 13px; font-weight: 500; flex: 1; min-width: 100px; }
+.m-rank { min-width: 85px; }
+.m-tags { display: flex; gap: 4px; flex-wrap: wrap; flex: 2; }
+.empty { color: var(--softer); font-size: 13px; text-align: center; padding: 2rem; }
+
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--green); color: #000; padding: 9px 22px; border-radius: 99px; font-size: 13px; font-weight: 600; transition: transform 0.25s; z-index: 999; pointer-events: none; }
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+@media (max-width: 800px) {
+  .stats { grid-template-columns: repeat(2,1fr); }
+  .grid2 { grid-template-columns: 1fr; }
+  .rank-selector { flex-wrap: wrap; }
+}
+/* ── VERWALTUNG ── */
+.vlabel { font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--soft); margin-bottom:6px; }
+.vinput { width:100%; background:var(--card2); border:1px solid var(--line2); border-radius:8px; color:var(--text); font-size:14px; padding:8px 12px; outline:none; font-family:'Inter',sans-serif; }
+.vinput:focus { border-color:var(--gold); }
+.vrank-btn { padding:5px 12px; font-size:12px; border-radius:6px; border:1px solid var(--line); background:var(--card2); color:var(--soft); cursor:pointer; font-family:'Inter',sans-serif; transition:all 0.15s; white-space:nowrap; }
+.vrank-btn.on { background:var(--gold); border-color:var(--gold); color:#000; font-weight:600; }
+.vrank-btn:hover:not(.on) { border-color:var(--line2); color:var(--text); }
+.v-row { display:flex; align-items:center; gap:12px; padding:9px 12px; border-bottom:1px solid var(--line); }
+.v-row:last-child { border-bottom:none; }
+.v-row:hover { background:var(--card2); border-radius:6px; }
+.v-name { flex:1; font-size:13px; font-weight:500; }
+.v-name-input { background:var(--card2); border:1px solid var(--gold); border-radius:6px; color:var(--text); font-size:13px; padding:4px 8px; outline:none; font-family:'Inter',sans-serif; width:160px; }
+.v-rank-sel { background:var(--card2); border:1px solid var(--line2); border-radius:6px; color:var(--text); font-size:12px; padding:4px 8px; outline:none; cursor:pointer; font-family:'Inter',sans-serif; }
+.v-rank-sel:focus { border-color:var(--gold); }
+.v-btn { background:none; border:none; cursor:pointer; font-size:13px; padding:4px 8px; border-radius:5px; font-family:'Inter',sans-serif; transition:all 0.15s; }
+.v-btn.edit { color:var(--soft); border:1px solid var(--line); }
+.v-btn.edit:hover { color:var(--gold); border-color:var(--gold); }
+.v-btn.save { color:var(--green); border:1px solid rgba(46,203,122,0.3); }
+.v-btn.save:hover { background:rgba(46,203,122,0.1); }
+.v-btn.del { color:var(--soft); border:1px solid var(--line); }
+.v-btn.del:hover { color:var(--red); border-color:var(--red); }
+.v-btn.cancel { color:var(--soft); border:1px solid var(--line); }
+.v-badge { font-family:'Rajdhani',sans-serif; font-size:11px; font-weight:700; padding:2px 8px; border-radius:4px; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">INY <em>RANKING</em></div>
+  <div class="tabs">
+    <button class="tab active" id="tab-d" onclick="showPage('d')">Dashboard</button>
+    <button class="tab" id="tab-e" onclick="showPage('e')">Eingabe</button>
+    <button class="tab" id="tab-v" onclick="showPage('v')">Verwaltung</button>
+  </div>
+  <div class="kw-wrap">
+    <label>KW</label>
+    <input type="number" id="kwInput" min="1" max="52" value="15" onchange="kwChanged()">
+  </div>
+</nav>
+
+<!-- ═══ DASHBOARD ═══ -->
+<div class="page active" id="page-d">
+
+  <div class="stats">
+    <div class="stat"><div class="stat-label">Erfasst</div><div class="stat-num g" id="s-count">0</div><div class="stat-sub">von 100 Mitgliedern</div></div>
+    <div class="stat"><div class="stat-label">Warnungen</div><div class="stat-num r" id="s-warn">0</div><div class="stat-sub">Strafpunkte aktiv</div></div>
+    <div class="stat"><div class="stat-label">Aufsteiger</div><div class="stat-num gr" id="s-up">0</div><div class="stat-sub">Rank verbessert</div></div>
+    <div class="stat"><div class="stat-label">Absteiger</div><div class="stat-num b" id="s-down">0</div><div class="stat-sub">Rank verschlechtert</div></div>
+  </div>
+
+  <div class="prog">
+    <div class="prog-top"><span>Erfassungsfortschritt KW <span id="kw-d">15</span></span><span id="prog-pct">0%</span></div>
+    <div class="prog-bar"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <div class="panel-head"><div class="panel-title">Warnliste</div><div class="panel-sub" id="warn-ct"></div></div>
+      <div id="warn-list"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><div class="panel-title">Top Performer</div><div class="panel-sub">beste Beteiligung</div></div>
+      <div id="top-list"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><div class="panel-title">Rank-Verteilung</div><div class="panel-sub">diese Woche</div></div>
+      <div class="rdist" id="rdist"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><div class="panel-title">Aktivste Felder</div><div class="panel-sub">Häufigkeit</div></div>
+      <div class="bars" id="field-bars"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div class="panel-title">Alle Mitglieder</div>
+      <div class="filter-row" id="filterBar">
+        <button class="flt on" data-f="all">Alle</button>
+        <button class="flt" data-f="warn">⚠ Warnungen</button>
+        <button class="flt" data-f="up">↑ Aufsteiger</button>
+        <button class="flt" data-f="down">↓ Absteiger</button>
+        <button class="flt" data-f="missing">○ Ausstehend</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="rtable">
+        <thead><tr><th>#</th><th>Mitglied</th><th>Rank</th><th>Tendenz</th><th>Flags</th><th>Status</th></tr></thead>
+        <tbody id="rankingBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ EINGABE ═══ -->
+<div class="page" id="page-e">
+
+  <div class="search-bar">
+    <div style="display:flex;align-items:center;">
+      <input type="text" class="search-input" id="searchInput" placeholder="🔍  Mitglied suchen...">
+      <span class="list-counter" id="listCounter"></span>
+    </div>
+    <div class="filter-row">
+      <button class="flt on" data-lf="all">Alle</button>
+      <button class="flt" data-lf="missing">○ Ausstehend</button>
+      <button class="flt" data-lf="done">✓ Erfasst</button>
+    </div>
+  </div>
+
+  <!-- EDITOR -->
+  <div class="editor-wrap" id="editor">
+    <div class="editor-header">
+      <div class="editor-name" id="editorName"></div>
+      <button class="editor-close" id="editorClose">✕</button>
+    </div>
+
+    <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--soft);margin-bottom:8px;">Rank</div>
+    <div class="rank-selector" id="rankRow">
+      <div class="rk-btn" data-r="1"><div class="rk-num">1</div><div class="rk-lbl">Rookie</div></div>
+      <div class="rk-btn" data-r="2"><div class="rk-num">2</div><div class="rk-lbl">Pro</div></div>
+      <div class="rk-btn on" data-r="3"><div class="rk-num">3</div><div class="rk-lbl">Elite</div></div>
+      <div class="rk-btn" data-r="4"><div class="rk-num">4</div><div class="rk-lbl">Leader</div></div>
+      <div class="rk-btn" data-r="5"><div class="rk-num">5</div><div class="rk-lbl">Chef</div></div>
+    </div>
+    <div class="fixed-note" id="fixedNote"></div>
+
+    <div class="flag-cats" id="flagCats"></div>
+    <button class="save-btn" id="saveBtn">✓ Speichern</button>
+  </div>
+
+  <div class="member-list" id="memberList"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ═══ VERWALTUNG ═══ -->
+<div class="page" id="page-v">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+
+    <!-- ADD MEMBER -->
+    <div class="panel">
+      <div class="panel-head"><div class="panel-title">➕ Mitglied hinzufügen</div></div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div>
+          <div class="vlabel">Name</div>
+          <input class="vinput" id="v-new-name" placeholder="Spielername..." type="text">
+        </div>
+        <div>
+          <div class="vlabel">Rang</div>
+          <div style="display:flex;gap:6px;">
+            <button class="vrank-btn on" data-vr="3">3 · Elite</button>
+            <button class="vrank-btn" data-vr="2">2 · Pro</button>
+            <button class="vrank-btn" data-vr="1">1 · Rookie</button>
+            <button class="vrank-btn" data-vr="4" style="color:var(--red);">4 · Leader</button>
+            <button class="vrank-btn" data-vr="5" style="color:var(--purple);">5 · Chef</button>
+          </div>
+        </div>
+        <button class="save-btn" id="v-add-btn" style="margin-top:4px;">+ Hinzufügen</button>
+      </div>
+    </div>
+
+    <!-- STATS -->
+    <div class="panel">
+      <div class="panel-head"><div class="panel-title">📊 Übersicht</div></div>
+      <div id="v-stats" style="display:flex;flex-direction:column;gap:8px;"></div>
+    </div>
+
+  </div>
+
+  <!-- MEMBER TABLE -->
+  <div class="panel" style="margin-top:1rem;">
+    <div class="panel-head">
+      <div class="panel-title">👥 Mitgliederliste</div>
+      <input class="search-input" id="v-search" placeholder="Suchen..." style="width:200px;">
+    </div>
+    <div id="v-list"></div>
+  </div>
+</div>
+
+<script>
+const MEMBERS = ["1MASTER1","7n2allInn","Agathe Power","Andy891","bakyyyy","Bavaria Nicki","Benbiton007","Bienenflüsterer","BlauesUfo","BogdanZr","Bronco BraTzeN","C0T34Z","CB66","CHIQ","Der Große 85","Desperadoid","Dimonhunter","DoDome 90","Doom Eternal 666","Hackepeter Pierro","Holly1811","Hubraum Hugo","IsaRich","ITJA","ivy","Jackira","Jango111234","Jarl Ulfhednar","Jimmy Muffy","Joe Car","John der Admiral","Judge Hupf","K 77","KittyNova","Koanzi","KOM1","KrawallRudi","KRÜMEL","Lion Tooth","LMNTRiX","MannDesFeuers","Marky the Mark","MelonHead sr","Metriker","MGB24","mika 1","MisterMiyagi42","MonGeneral","MR Payne","mrsananas92","Müller214","Ne Yu","Nicole 1803","nika","NSXA","Nuskovic","Nussl7","Oberbefehlshaber Tim","ooo Rowdy ooo","PaMi1","PfirsichtörtchenRed","PIKA ;)","Pipo2288","Plogmann","Resoluke","Roesty","RonRi8","Roth the Redneck","RuckzuckSchorle","Serphiroth","SirBuuumsALot","Snowblinde","Stefan1211","Stefan5678","Steff 68","Tarzan84","Technodrome","Timbo45","Timimi1985","Union Berlin 66","Wolle99","wshbR","WüsTenOachkáTzL","xtremee003","XX El Gore XX","YeehawJute","Yoshi11188","ZombieDaddy","Zuchtferkel","Züpfeklatscha"];
+
+const PREV = {"1MASTER1":3,"7n2allInn":3,"Agathe Power":2,"Andy891":3,"bakyyyy":2,"Bavaria Nicki":3,"Benbiton007":3,"Bienenflüsterer":3,"BlauesUfo":3,"BogdanZr":3,"Bronco BraTzeN":3,"C0T34Z":4,"CB66":2,"CHIQ":3,"Der Große 85":2,"Desperadoid":3,"Dimonhunter":3,"DoDome 90":2,"Doom Eternal 666":2,"Hackepeter Pierro":3,"Holly1811":3,"Hubraum Hugo":3,"IsaRich":3,"ITJA":4,"ivy":4,"Jackira":3,"Jango111234":2,"Jarl Ulfhednar":3,"Jimmy Muffy":3,"Joe Car":3,"John der Admiral":2,"Judge Hupf":3,"K 77":3,"KittyNova":2,"Koanzi":3,"KOM1":3,"KrawallRudi":5,"KRÜMEL":3,"Lion Tooth":4,"LMNTRiX":3,"MannDesFeuers":4,"Marky the Mark":3,"MelonHead sr":3,"Metriker":3,"MGB24":2,"mika 1":2,"MisterMiyagi42":2,"MonGeneral":2,"MR Payne":2,"mrsananas92":2,"Müller214":3,"Ne Yu":2,"Nicole 1803":4,"nika":3,"NSXA":2,"Nuskovic":2,"Nussl7":3,"Oberbefehlshaber Tim":3,"ooo Rowdy ooo":3,"PaMi1":3,"PfirsichtörtchenRed":2,"PIKA ;)":3,"Pipo2288":3,"Plogmann":1,"Resoluke":3,"Roesty":3,"RonRi8":3,"Roth the Redneck":3,"RuckzuckSchorle":3,"Serphiroth":3,"SirBuuumsALot":3,"Snowblinde":3,"Stefan1211":3,"Stefan5678":3,"Steff 68":3,"Tarzan84":3,"Technodrome":3,"Timbo45":3,"Timimi1985":1,"Union Berlin 66":4,"Wolle99":3,"wshbR":3,"WüsTenOachkáTzL":3,"xtremee003":3,"XX El Gore XX":3,"YeehawJute":3,"Yoshi11188":3,"ZombieDaddy":3,"Zuchtferkel":2,"Züpfeklatscha":3};
+
+const R5 = new Set(["KrawallRudi"]);
+const R4 = new Set(["ITJA","MR Payne","MonGeneral","MannDesFeuers","C0T34Z","Union Berlin 66","ivy","Lion Tooth","Nicole 1803"]);
+const RC = {1:'#f0a500',2:'#27c97a',3:'#4a9eff',4:'#e05545',5:'#9b6dff'};
+const RL = {1:'Rookie',2:'Pro',3:'Elite',4:'Leader',5:'Chef'};
+
+const CATS = [
+  { l:'⚔ VS', t:'b', bg:'rgba(74,158,255,0.06)', bc:'rgba(74,158,255,0.15)', lc:'#6aabff',
+    f:[{k:'vsUnter50',l:'unter 50 Mio',t:'r'},{k:'vsTop30',l:'Top 30',t:'b'},{k:'vsTop10',l:'Top 10',t:'b'}] },
+  { l:'💰 Spenden', t:'b', bg:'rgba(74,158,255,0.06)', bc:'rgba(74,158,255,0.15)', lc:'#6aabff',
+    f:[{k:'spendeUnter35k',l:'unter 35K',t:'r'},{k:'spendeTop20',l:'Top 20',t:'b'}] },
+  { l:'🛡 Wache', t:'b', bg:'rgba(74,158,255,0.06)', bc:'rgba(74,158,255,0.15)', lc:'#6aabff',
+    f:[{k:'wache1',l:'W1 Teilnahme',t:'b'},{k:'wache1dmg',l:'W1 kein DMG',t:'r'},{k:'wache2',l:'W2 Teilnahme',t:'b'},{k:'wache2dmg',l:'W2 kein DMG',t:'r'},{k:'wache3',l:'W3 Teilnahme',t:'b'},{k:'wache3dmg',l:'W3 kein DMG',t:'r'}] },
+  { l:'🎯 Spezialevents', t:'b', bg:'rgba(74,158,255,0.06)', bc:'rgba(74,158,255,0.15)', lc:'#6aabff',
+    f:[{k:'seTeilnahme',l:'Teilnahme',t:'b'},{k:'seTop50',l:'Top 50',t:'b'},{k:'seTop20',l:'Top 20',t:'b'}] },
+  { l:'🏜 Wüste', t:'b', bg:'rgba(74,158,255,0.06)', bc:'rgba(74,158,255,0.15)', lc:'#6aabff',
+    f:[{k:'wuesteAnmeldung',l:'Anmeldung',t:'b'},{k:'wuesteTeilnahme',l:'Teilnahme',t:'b'},{k:'wuesteFehlen',l:'Fehlen',t:'r'}] },
+  { l:'❌ Strafpunkte', t:'r', bg:'rgba(224,85,69,0.06)', bc:'rgba(224,85,69,0.2)', lc:'#f09080',
+    f:[{k:'inaktiv',l:'Inaktiv',t:'r'},{k:'schild',l:'Schild',t:'r'},{k:'falschparken',l:'Falschparken',t:'r'},{k:'nap',l:'NAP',t:'r'},{k:'mails',l:'Ankündigung',t:'r'},{k:'verhIntern',l:'Verh. Intern',t:'r'},{k:'verhExtern',l:'Verh. Extern',t:'r'},{k:'afk',l:'AFK',t:'r'}] },
+  { l:'⭐ Bonus', t:'a', bg:'rgba(240,165,0,0.06)', bc:'rgba(240,165,0,0.2)', lc:'var(--gold)',
+    f:[{k:'umfragen',l:'Umfragen',t:'a'},{k:'support',l:'Support',t:'a'},{k:'feedback',l:'Feedback',t:'a'}] }
+];
+
+const FLAGS = CATS.flatMap(c=>c.f);
+const LBL = Object.fromEntries(FLAGS.map(f=>[f.k,f.l]));
+const DANGER = new Set(FLAGS.filter(f=>f.t==='r').map(f=>f.k));
+const AMBER = new Set(FLAGS.filter(f=>f.t==='a').map(f=>f.k));
+
+function isFixed(n){return R5.has(n)||R4.has(n);}
+function fixedRank(n){return R5.has(n)?5:R4.has(n)?4:null;}
+function rbClass(r){return 'rb'+r;}
+
+// ── STATE ──
+let kw=15, entries=[], activeFilter='all', listFilter='all', search='', edName=null, edFlags={}, edRank=3;
+
+function sk(){return `iny_kw${kw}`;}
+function save(){localStorage.setItem(sk(),JSON.stringify(entries));}
+function load(){try{const d=localStorage.getItem(sk());entries=d?JSON.parse(d):[];}catch(e){entries=[];}}
+
+kw=parseInt(document.getElementById('kwInput').value);
+load();
+
+// ── RANK BUTTONS ──
+document.getElementById('rankRow').addEventListener('click',function(e){
+  const btn=e.target.closest('.rk-btn');
+  if(!btn||btn.disabled) return;
+  edRank=parseInt(btn.dataset.r);
+  document.querySelectorAll('.rk-btn').forEach(b=>b.classList.toggle('on',parseInt(b.dataset.r)===edRank));
+});
+
+// ── EDITOR OPEN ──
+function openEditor(name){
+  edName=name;
+  const e=entries.find(x=>x.name===name);
+  edFlags=e?{...e.flags}:{};
+  const fixed=isFixed(name);
+  edRank=e?e.rank:(fixed?fixedRank(name):(PREV[name]||3));
+
+  document.getElementById('editorName').textContent=name+(fixed?' · '+(R5.has(name)?'R5 Chef':'R4 Leader'):'');
+  document.getElementById('editor').style.display='block';
+
+  // Rank btns
+  document.querySelectorAll('.rk-btn').forEach(b=>{
+    b.disabled=fixed;
+    b.classList.toggle('on',parseInt(b.dataset.r)===edRank);
+  });
+  const fn=document.getElementById('fixedNote');
+  fn.style.display=fixed?'block':'none';
+  if(fixed) fn.textContent=(R5.has(name)?'R5 – Chef':'R4 – Leader')+' · Rank ist fix';
+
+  // Flag categories
+  document.getElementById('flagCats').innerHTML=CATS.map(cat=>{
+    const btns=cat.f.map(f=>{
+      const on=!!edFlags[f.k];
+      const onStyle=f.t==='r'
+        ?'border-color:rgba(224,85,69,0.5);background:rgba(224,85,69,0.15);color:#f09080;'
+        :f.t==='a'
+        ?'border-color:rgba(240,165,0,0.4);background:rgba(240,165,0,0.12);color:var(--gold);'
+        :'border-color:rgba(74,158,255,0.4);background:rgba(74,158,255,0.12);color:#80b8ff;';
+      return `<button class="flag-btn" data-fk="${f.k}" onclick="toggleFlag('${f.k}')" style="${on?onStyle:''}">${f.l}</button>`;
+    }).join('');
+    return `<div class="flag-cat" style="background:${cat.bg};border:1px solid ${cat.bc};">
+      <div class="flag-cat-title" style="color:${cat.lc};">${cat.l}</div>
+      <div class="flag-btns">${btns}</div>
+    </div>`;
+  }).join('');
+
+  // highlight open row
+  document.querySelectorAll('.member-row').forEach(r=>r.classList.toggle('is-open',r.dataset.name===name));
+  document.getElementById('editor').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+window.openEditor=openEditor;
+
+function toggleFlag(k){
+  edFlags[k]=!edFlags[k];
+  const btn=document.querySelector(`[data-fk="${k}"]`);
+  const f=FLAGS.find(x=>x.k===k);
+  const on=edFlags[k];
+  const onStyle=f.t==='r'
+    ?'border-color:rgba(224,85,69,0.5);background:rgba(224,85,69,0.15);color:#f09080;'
+    :f.t==='a'
+    ?'border-color:rgba(240,165,0,0.4);background:rgba(240,165,0,0.12);color:var(--gold);'
+    :'border-color:rgba(74,158,255,0.4);background:rgba(74,158,255,0.12);color:#80b8ff;';
+  btn.style.cssText=on?onStyle:'';
+}
+window.toggleFlag=toggleFlag;
+
+// ── SAVE ──
+document.getElementById('saveBtn').addEventListener('click',function(){
+  if(!edName) return;
+  const rank=isFixed(edName)?fixedRank(edName):edRank;
+  const was=!!entries.find(x=>x.name===edName);
+  entries=entries.filter(x=>x.name!==edName);
+  entries.push({name:edName,rank,flags:{...edFlags}});
+  save(); renderAll();
+  toast(edName+(was?' aktualisiert!':' gespeichert!'));
+  closeEditor();
+});
+
+// ── CLOSE EDITOR ──
+document.getElementById('editorClose').addEventListener('click',closeEditor);
+function closeEditor(){
+  document.getElementById('editor').style.display='none';
+  document.querySelectorAll('.member-row').forEach(r=>r.classList.remove('is-open'));
+  edName=null; edFlags={};
+}
+
+// ── SEARCH & FILTER ──
+document.getElementById('searchInput').addEventListener('input',function(){search=this.value.toLowerCase();renderList();});
+document.querySelectorAll('[data-lf]').forEach(b=>b.addEventListener('click',function(){
+  listFilter=this.dataset.lf;
+  document.querySelectorAll('[data-lf]').forEach(x=>x.classList.toggle('on',x.dataset.lf===listFilter));
+  renderList();
+}));
+
+// ── KW ──
+function kwChanged(){kw=parseInt(document.getElementById('kwInput').value);load();renderAll();}
+
+// ── NAV ──
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.getElementById('tab-d').classList.toggle('active',id==='d');
+  document.getElementById('tab-e').classList.toggle('active',id==='e');
+  document.getElementById('tab-v').classList.toggle('active',id==='v');
+  if(id==='d') renderDashboard();
+  if(id==='e') renderList();
+  if(id==='v') renderVerwaltung();
+}
+
+// ── RENDER ALL ──
+function renderAll(){
+  renderDashboard();
+  if(document.getElementById('page-e').classList.contains('active')) renderList();
+  if(document.getElementById('page-v').classList.contains('active')) renderVerwaltung();
+}
+
+// ── MEMBER LIST ──
+function renderList(){
+  const n=entries.length, pct=Math.round(n/members.length*100);
+  document.getElementById('listCounter').textContent=`${n} / ${members.length} erfasst (${pct}%)`;
+
+  const shown=members.filter(name=>{
+    if(search&&!name.toLowerCase().includes(search)) return false;
+    const e=entries.find(x=>x.name===name);
+    if(listFilter==='missing') return !e;
+    if(listFilter==='done') return !!e;
+    return true;
+  });
+
+  const list=document.getElementById('memberList');
+  if(!shown.length){list.innerHTML=`<div class="empty">Keine Mitglieder gefunden.</div>`;return;}
+
+  list.innerHTML=shown.map(name=>{
+    const e=entries.find(x=>x.name===name);
+    const rank=e?e.rank:(isFixed(name)?fixedRank(name):null);
+    const hasWarn=e?[...DANGER].some(k=>e.flags[k]):false;
+    const af=e?Object.keys(e.flags).filter(k=>e.flags[k]):[];
+
+    const statusIcon=!e?'<span style="color:var(--softer)">○</span>':hasWarn?'<span style="color:var(--red)">⚠</span>':'<span style="color:var(--green)">✓</span>';
+    const rankBadge=rank?`<span class="rank-badge ${rbClass(rank)}">${rank} · ${RL[rank]}</span>`:'<span style="color:var(--softer);font-size:12px;">—</span>';
+    const fixedBadge=isFixed(name)?` <span style="font-size:10px;color:var(--gold);margin-left:3px;">${R5.has(name)?'R5':'R4'}</span>`:'';
+    const tags=af.slice(0,3).map(k=>{
+      const cls=DANGER.has(k)?'r':AMBER.has(k)?'a':'b';
+      return `<span class="tag ${cls}">${LBL[k]||k}</span>`;
+    }).join('')+(af.length>3?`<span class="tag" style="color:var(--softer);border-color:var(--softer);">+${af.length-3}</span>`:'');
+
+    return `<div class="member-row" data-name="${name.replace(/"/g,'&quot;')}" onclick="openEditor('${name.replace(/'/g,"\\'")}')">
+      <span class="m-status">${statusIcon}</span>
+      <span class="m-name">${name}${fixedBadge}</span>
+      <span class="m-rank">${rankBadge}</span>
+      <span class="m-tags">${tags}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── DASHBOARD ──
+function renderDashboard(){
+  const n=entries.length, pct=Math.round(n/members.length*100);
+  document.getElementById('s-count').textContent=n;
+  document.getElementById('prog-fill').style.width=pct+'%';
+  document.getElementById('prog-pct').textContent=pct+'%';
+  document.getElementById('kw-d').textContent=kw;
+
+  const dk=[...DANGER];
+  const we=entries.filter(e=>dk.some(k=>e.flags[k]));
+  const ue=entries.filter(e=>!isFixed(e.name)&&e.rank<(PREV[e.name]||3));
+  const de=entries.filter(e=>!isFixed(e.name)&&e.rank>(PREV[e.name]||3));
+  document.getElementById('s-warn').textContent=we.length;
+  document.getElementById('s-up').textContent=ue.length;
+  document.getElementById('s-down').textContent=de.length;
+  document.getElementById('warn-ct').textContent=we.length+' Mitglieder';
+
+  document.getElementById('warn-list').innerHTML=we.length===0
+    ?'<div class="empty" style="padding:0.5rem 0;">Keine Warnungen diese Woche.</div>'
+    :we.slice(0,8).map(e=>{
+      const wf=dk.filter(k=>e.flags[k]);
+      const col=RC[e.rank]||'#888';
+      const ini=e.name.split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase();
+      return `<div class="warn-row">
+        <div class="avatar" style="background:${col}20;color:${col};border:1px solid ${col}40;">${ini}</div>
+        <div style="flex:1"><div class="warn-name">${e.name}</div>
+        <div class="tags">${wf.map(k=>`<span class="tag r">${LBL[k]||k}</span>`).join('')}</div></div>
+      </div>`;
+    }).join('');
+
+  const sc=entries.map(e=>{
+    const pos=Object.keys(e.flags).filter(k=>e.flags[k]&&!DANGER.has(k)).length;
+    const neg=Object.keys(e.flags).filter(k=>e.flags[k]&&DANGER.has(k)).length;
+    return{...e,score:pos-neg*2};
+  }).sort((a,b)=>b.score-a.score);
+  document.getElementById('top-list').innerHTML=sc.length===0
+    ?'<div class="empty" style="padding:0.5rem 0;">Noch keine Einträge.</div>'
+    :sc.slice(0,8).map((e,i)=>`<div class="top-row">
+      <div class="top-pos ${i===0?'p1':i===1?'p2':i===2?'p3':''}">${i+1}</div>
+      <div class="top-name">${e.name}</div>
+      <div class="rank-badge ${rbClass(e.rank)}">${e.rank} · ${RL[e.rank]}</div>
+    </div>`).join('');
+
+  const dist={1:0,2:0,3:0,4:0,5:0};
+  entries.forEach(e=>dist[e.rank]=(dist[e.rank]||0)+1);
+  const maxD=Math.max(...Object.values(dist),1);
+  document.getElementById('rdist').innerHTML=[1,2,3,4,5].map(r=>{
+    const cnt=dist[r]||0, h=Math.round(cnt/maxD*60);
+    return `<div class="rdist-col">
+      <div class="rdist-n">${cnt}</div>
+      <div class="rdist-bar" style="height:${h}px;background:${RC[r]};opacity:0.85;"></div>
+      <div class="rdist-l">R${r}</div>
+    </div>`;
+  }).join('');
+
+  const freq={};
+  entries.forEach(e=>Object.keys(e.flags).forEach(k=>{if(e.flags[k])freq[k]=(freq[k]||0)+1;}));
+  const srt=Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const mxF=srt.length?srt[0][1]:1;
+  document.getElementById('field-bars').innerHTML=srt.length===0
+    ?'<div class="empty" style="padding:0.5rem 0;">Noch keine Daten.</div>'
+    :srt.map(([k,v])=>`<div class="bar-row">
+      <div class="bar-lbl">${LBL[k]||k}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.round(v/mxF*100)}%;background:${DANGER.has(k)?'#e05545':AMBER.has(k)?'#f0a500':'#4a9eff'};"></div></div>
+      <div class="bar-n">${v}</div>
+    </div>`).join('');
+
+  renderTable();
+}
+
+// ── RANKING TABLE ──
+function renderTable(){
+  document.querySelectorAll('.flt[data-f]').forEach(b=>b.classList.toggle('on',b.dataset.f===activeFilter));
+  const rows=members.map(name=>{
+    const e=entries.find(x=>x.name===name);
+    const rank=e?e.rank:(isFixed(name)?fixedRank(name):null);
+    const prev=isFixed(name)?fixedRank(name):(PREV[name]||3);
+    const hasEntry=!!e, hasWarn=e?[...DANGER].some(k=>e.flags[k]):false;
+    const tend=hasEntry&&!isFixed(name)?rank-prev:0;
+    return{name,rank,hasEntry,hasWarn,tend,flags:e?e.flags:{}};
+  }).filter(r=>{
+    if(activeFilter==='warn') return r.hasWarn;
+    if(activeFilter==='up') return r.tend<0;
+    if(activeFilter==='down') return r.tend>0;
+    if(activeFilter==='missing') return !r.hasEntry;
+    return true;
+  });
+
+  const tbody=document.getElementById('rankingBody');
+  if(!rows.length){tbody.innerHTML='<tr><td colspan="6" style="color:var(--softer);text-align:center;padding:1.5rem;">Keine Einträge.</td></tr>';return;}
+
+  let pos=0;
+  tbody.innerHTML=rows.map(r=>{
+    if(r.hasEntry) pos++;
+    const rb=r.rank?`<span class="rank-badge ${rbClass(r.rank)}">${r.rank} · ${RL[r.rank]}</span>`:'<span style="color:var(--softer)">—</span>';
+    const th=isFixed(r.name)?'<span class="t-eq">—</span>':r.tend<0?`<span class="t-up">↑ ${Math.abs(r.tend)}</span>`:r.tend>0?`<span class="t-dn">↓ ${r.tend}</span>`:'<span class="t-eq">=</span>';
+    const af=Object.keys(r.flags).filter(k=>r.flags[k]);
+    const fh=af.length
+      ?af.slice(0,3).map(k=>`<span class="tag ${DANGER.has(k)?'r':AMBER.has(k)?'a':'b'}">${LBL[k]||k}</span>`).join('')+(af.length>3?`<span class="tag" style="color:var(--softer);border-color:var(--softer);">+${af.length-3}</span>`:'')
+      :'<span style="color:var(--softer);font-size:12px;">—</span>';
+    const sh=!r.hasEntry
+      ?`<span class="sdot sd-mis"></span><span style="color:var(--softer);font-size:12px;">Ausstehend</span>`
+      :r.hasWarn
+      ?`<span class="sdot sd-warn"></span><span style="color:var(--red);font-size:12px;">Warnung</span>`
+      :`<span class="sdot sd-ok"></span><span style="color:var(--green);font-size:12px;">OK</span>`;
+    return `<tr class="${r.hasEntry?'':'dim'}">
+      <td style="font-family:'Rajdhani',sans-serif;font-weight:700;color:var(--softer);">${r.hasEntry?pos:'·'}</td>
+      <td style="font-weight:500;">${r.name}${isFixed(r.name)?` <span style="font-size:10px;color:var(--gold);">${R5.has(r.name)?'R5':'R4'}</span>`:''}</td>
+      <td>${rb}</td><td>${th}</td><td><div style="display:flex;gap:4px;flex-wrap:wrap;">${fh}</div></td><td>${sh}</td>
+    </tr>`;
+  }).join('');
+}
+
+document.getElementById('filterBar').addEventListener('click',function(e){
+  const btn=e.target.closest('.flt[data-f]');
+  if(!btn) return;
+  activeFilter=btn.dataset.f;
+  renderTable();
+});
+
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+// ── VERWALTUNG ──
+let members = [...MEMBERS];
+const MK = 'iny_members', RK = 'iny_roles';
+
+function loadMembers(){
+  try{
+    const m=localStorage.getItem(MK), r=localStorage.getItem(RK);
+    if(m) members=JSON.parse(m);
+    if(r){ const roles=JSON.parse(r); R5.clear(); R4.clear(); (roles.r5||[]).forEach(n=>R5.add(n)); (roles.r4||[]).forEach(n=>R4.add(n)); }
+  }catch(e){}
+}
+function saveMembers(){ localStorage.setItem(MK,JSON.stringify(members)); localStorage.setItem(RK,JSON.stringify({r5:[...R5],r4:[...R4]})); }
+loadMembers();
+
+let vNewRank=3;
+document.querySelectorAll('.vrank-btn').forEach(btn=>{
+  btn.addEventListener('click',function(){
+    vNewRank=parseInt(this.dataset.vr);
+    document.querySelectorAll('.vrank-btn').forEach(b=>b.classList.toggle('on',b.dataset.vr===this.dataset.vr));
+  });
+});
+
+document.getElementById('v-add-btn').addEventListener('click',function(){
+  const name=document.getElementById('v-new-name').value.trim();
+  if(!name){toast('Bitte einen Namen eingeben!');return;}
+  if(members.includes(name)){toast('Mitglied existiert bereits!');return;}
+  members.push(name);
+  PREV[name]=vNewRank;
+  if(vNewRank===4) R4.add(name);
+  if(vNewRank===5) R5.add(name);
+  saveMembers();
+  document.getElementById('v-new-name').value='';
+  renderVerwaltung();
+  toast(name+' hinzugefügt!');
+});
+
+document.getElementById('v-search').addEventListener('input',function(){ renderVerwaltung(this.value.toLowerCase()); });
+
+let editingMember=null;
+
+function renderVerwaltung(filter=''){
+  document.getElementById('v-stats').innerHTML=`
+    <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);"><span style="color:var(--soft);font-size:13px;">Gesamt</span><span style="font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;color:var(--gold);">${members.length}</span></div>
+    <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);"><span style="color:var(--soft);font-size:13px;">R5 Chef</span><span style="font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;color:var(--purple);">${R5.size}</span></div>
+    <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);"><span style="color:var(--soft);font-size:13px;">R4 Leader</span><span style="font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;color:var(--red);">${R4.size}</span></div>
+    <div style="display:flex;justify-content:space-between;padding:8px 0;"><span style="color:var(--soft);font-size:13px;">R1–R3</span><span style="font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;color:var(--green);">${members.filter(n=>!R4.has(n)&&!R5.has(n)).length}</span></div>`;
+
+  const shown=filter?members.filter(n=>n.toLowerCase().includes(filter)):members;
+  const list=document.getElementById('v-list');
+  if(!shown.length){list.innerHTML='<div class="empty">Keine Mitglieder gefunden.</div>';return;}
+
+  list.innerHTML=shown.map(name=>{
+    const role=R5.has(name)?5:R4.has(name)?4:(PREV[name]||3);
+    const bs=role===5?'background:rgba(155,109,255,0.15);color:var(--purple);border:1px solid rgba(155,109,255,0.3);':role===4?'background:rgba(224,85,69,0.15);color:var(--red);border:1px solid rgba(224,85,69,0.3);':'background:rgba(74,158,255,0.12);color:#80b8ff;border:1px solid rgba(74,158,255,0.25);';
+    if(editingMember===name){
+      return `<div class="v-row">
+        <input class="v-name-input" id="v-edit-input" value="${name.replace(/"/g,'&quot;')}" onkeydown="if(event.key==='Enter')saveMemberEdit('${name.replace(/'/g,"\\'")}')">
+        <select class="v-rank-sel" id="v-edit-rank">
+          <option value="1" ${role===1?'selected':''}>1 · Rookie</option>
+          <option value="2" ${role===2?'selected':''}>2 · Pro</option>
+          <option value="3" ${role===3?'selected':''}>3 · Elite</option>
+          <option value="4" ${role===4?'selected':''}>4 · Leader (R4)</option>
+          <option value="5" ${role===5?'selected':''}>5 · Chef (R5)</option>
+        </select>
+        <button class="v-btn save" onclick="saveMemberEdit('${name.replace(/'/g,"\\'")}')">✓ Speichern</button>
+        <button class="v-btn cancel" onclick="cancelEdit()">✕</button>
+      </div>`;
+    }
+    return `<div class="v-row">
+      <span class="v-name">${name}</span>
+      <span class="v-badge" style="${bs}">R${role} · ${RL[role]||''}</span>
+      <button class="v-btn edit" onclick="startEdit('${name.replace(/'/g,"\\'")}')">✏ Bearbeiten</button>
+      <button class="v-btn del" onclick="removeMember('${name.replace(/'/g,"\\'")}')">🗑</button>
+    </div>`;
+  }).join('');
+}
+
+function startEdit(name){ editingMember=name; renderVerwaltung(document.getElementById('v-search').value.toLowerCase()); setTimeout(()=>document.getElementById('v-edit-input')?.focus(),50); }
+function cancelEdit(){ editingMember=null; renderVerwaltung(document.getElementById('v-search').value.toLowerCase()); }
+window.startEdit=startEdit; window.cancelEdit=cancelEdit;
+
+function saveMemberEdit(oldName){
+  const newName=document.getElementById('v-edit-input')?.value.trim();
+  const newRank=parseInt(document.getElementById('v-edit-rank')?.value||3);
+  if(!newName){toast('Name darf nicht leer sein!');return;}
+  const idx=members.indexOf(oldName);
+  if(idx>-1) members[idx]=newName;
+  R5.delete(oldName); R4.delete(oldName);
+  if(newRank===5) R5.add(newName);
+  else if(newRank===4) R4.add(newName);
+  PREV[newName]=newRank;
+  if(newName!==oldName){ delete PREV[oldName]; entries=entries.map(e=>e.name===oldName?{...e,name:newName}:e); save(); }
+  saveMembers(); editingMember=null;
+  renderVerwaltung(document.getElementById('v-search').value.toLowerCase());
+  toast(newName+' gespeichert!');
+}
+window.saveMemberEdit=saveMemberEdit;
+
+function removeMember(name){
+  if(!confirm('"'+name+'" wirklich entfernen?')) return;
+  members=members.filter(n=>n!==name); R4.delete(name); R5.delete(name);
+  entries=entries.filter(e=>e.name!==name); save(); saveMembers();
+  renderVerwaltung(document.getElementById('v-search').value.toLowerCase());
+  renderDashboard(); toast(name+' entfernt!');
+}
+window.removeMember=removeMember;
+
+renderAll();
+</script>
+</body>
+</html>
