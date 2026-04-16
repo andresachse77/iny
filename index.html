@@ -41,6 +41,10 @@ nav {
 .tabs { display: flex; gap: 4px; background: var(--card2); border-radius: 8px; padding: 3px; }
 .tab { padding: 5px 18px; font-size: 13px; font-weight: 500; border: none; border-radius: 6px; background: none; color: var(--soft); cursor: pointer; transition: all 0.15s; font-family: 'Inter', sans-serif; }
 .tab.active { background: var(--card); color: var(--text); }
+.sync-btn { background: var(--card2); border: 1px solid var(--line2); border-radius: 8px; padding: 5px 10px; font-size: 16px; cursor: pointer; color: var(--soft); transition: all 0.2s; }
+.sync-btn:hover { color: var(--gold); border-color: var(--gold); }
+.sync-btn.spinning { animation: spin 0.8s linear infinite; pointer-events: none; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 .kw-wrap { display: flex; align-items: center; gap: 6px; background: var(--card2); border: 1px solid var(--line2); border-radius: 8px; padding: 5px 12px; }
 .kw-wrap label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--soft); }
 .kw-wrap input { background: none; border: none; color: var(--gold); font-family: 'Rajdhani', sans-serif; font-size: 20px; font-weight: 700; width: 42px; text-align: center; outline: none; }
@@ -234,6 +238,30 @@ nav {
 .v-btn.del:hover { color:var(--red); border-color:var(--red); }
 .v-btn.cancel { color:var(--soft); border:1px solid var(--line); }
 .v-badge { font-family:'Rajdhani',sans-serif; font-size:11px; font-weight:700; padding:2px 8px; border-radius:4px; }
+
+/* ── WACHE TILES ── */
+.wache-tabs { display:flex; gap:6px; margin-bottom:1rem; }
+.wache-tab { padding:8px 20px; border-radius:8px; border:1px solid var(--line2); background:var(--card); color:var(--soft); cursor:pointer; font-family:'Rajdhani',sans-serif; font-size:15px; font-weight:700; transition:all 0.15s; }
+.wache-tab.on { background:rgba(74,158,255,0.12); color:#80b8ff; border-color:rgba(74,158,255,0.4); }
+.wache-tab:hover:not(.on) { border-color:var(--line2); color:var(--text); }
+.wache-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:8px; }
+.wache-tile { position:relative; border-radius:8px; border:1px solid var(--line); background:var(--card); overflow:hidden; transition:all 0.15s; }
+.wache-tile .wt-top { padding:8px 10px 4px; text-align:center; }
+.wache-tile .wt-name { font-size:12px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.wache-tile .wt-rank { font-family:'Rajdhani',sans-serif; font-size:10px; color:var(--soft); margin-top:1px; }
+.wache-tile .wt-btns { display:flex; border-top:1px solid var(--line); }
+.wt-btn { flex:1; display:flex; align-items:center; justify-content:center; gap:4px; padding:8px 4px; cursor:pointer; font-size:12px; font-family:'Inter',sans-serif; transition:all 0.12s; user-select:none; -webkit-tap-highlight-color:transparent; border:none; background:none; color:var(--softer); }
+.wt-btn:first-child { border-right:1px solid var(--line); }
+.wt-btn:hover { background:var(--card2); }
+.wt-btn:active { transform:scale(0.95); }
+.wt-btn.on-bad { background:rgba(224,85,69,0.12); color:var(--red); }
+.wt-btn.on-good { background:rgba(46,203,122,0.10); color:var(--green); }
+.wache-tile.w-ok { border-color:rgba(46,203,122,0.4); }
+.wache-tile.w-dmg { border-color:rgba(224,85,69,0.4); }
+.wache-tile.w-none { opacity:0.5; }
+.wache-legend { display:flex; gap:16px; margin-bottom:1rem; font-size:12px; color:var(--soft); align-items:center; flex-wrap:wrap; }
+.wache-legend span { display:flex; align-items:center; gap:4px; }
+.wache-counter { font-family:'Rajdhani',sans-serif; font-size:14px; font-weight:700; color:var(--gold); }
 </style>
 </head>
 <body>
@@ -243,8 +271,10 @@ nav {
   <div class="tabs">
     <button class="tab active" id="tab-d" onclick="showPage('d')">Dashboard</button>
     <button class="tab" id="tab-e" onclick="showPage('e')">Eingabe</button>
+    <button class="tab" id="tab-w" onclick="showPage('w')">Wache</button>
     <button class="tab" id="tab-v" onclick="showPage('v')">Verwaltung</button>
   </div>
+  <button class="sync-btn" id="btn-sync" onclick="syncData()" title="Daten neu laden">🔄</button>
   <div class="kw-wrap">
     <label>KW</label>
     <input type="number" id="kwInput" min="1" max="52" value="15" onchange="kwChanged()">
@@ -346,6 +376,31 @@ nav {
 
 <div class="toast" id="toast"></div>
 
+<!-- ═══ WACHE ═══ -->
+<div class="page" id="page-w">
+  <div class="panel">
+    <div class="panel-head">
+      <div class="panel-title">🛡 Wache-Verwaltung</div>
+      <div class="panel-sub">Kachel: links = kein DMG · rechts = guter DMG</div>
+    </div>
+
+    <div class="wache-tabs">
+      <button class="wache-tab on" data-wn="1" onclick="selectWache(1)">Wache 1</button>
+      <button class="wache-tab" data-wn="2" onclick="selectWache(2)">Wache 2</button>
+      <button class="wache-tab" data-wn="3" onclick="selectWache(3)">Wache 3</button>
+    </div>
+
+    <div class="wache-legend">
+      <span><span style="color:var(--red);">⚠</span> kein DMG (Strafe)</span>
+      <span><span style="color:var(--green);">⚔</span> guter DMG</span>
+      <span><span style="color:var(--softer);">○</span> nicht dabei</span>
+      <span style="margin-left:auto;" class="wache-counter" id="w-counter">0 / 0</span>
+    </div>
+
+    <div class="wache-grid" id="wache-grid"></div>
+  </div>
+</div>
+
 <!-- ═══ VERWALTUNG ═══ -->
 <div class="page" id="page-v">
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
@@ -391,12 +446,68 @@ nav {
 </div>
 
 <script>
-const MEMBERS = ["1MASTER1","7n2allInn","Agathe Power","Andy891","bakyyyy","Bavaria Nicki","Benbiton007","Bienenflüsterer","BlauesUfo","BogdanZr","Bronco BraTzeN","C0T34Z","CB66","CHIQ","Der Große 85","Desperadoid","Dimonhunter","DoDome 90","Doom Eternal 666","Hackepeter Pierro","Holly1811","Hubraum Hugo","IsaRich","ITJA","ivy","Jackira","Jango111234","Jarl Ulfhednar","Jimmy Muffy","Joe Car","John der Admiral","Judge Hupf","K 77","KittyNova","Koanzi","KOM1","KrawallRudi","KRÜMEL","Lion Tooth","LMNTRiX","MannDesFeuers","Marky the Mark","MelonHead sr","Metriker","MGB24","mika 1","MisterMiyagi42","MonGeneral","MR Payne","mrsananas92","Müller214","Ne Yu","Nicole 1803","nika","NSXA","Nuskovic","Nussl7","Oberbefehlshaber Tim","ooo Rowdy ooo","PaMi1","PfirsichtörtchenRed","PIKA ;)","Pipo2288","Plogmann","Resoluke","Roesty","RonRi8","Roth the Redneck","RuckzuckSchorle","Serphiroth","SirBuuumsALot","Snowblinde","Stefan1211","Stefan5678","Steff 68","Tarzan84","Technodrome","Timbo45","Timimi1985","Union Berlin 66","Wolle99","wshbR","WüsTenOachkáTzL","xtremee003","XX El Gore XX","YeehawJute","Yoshi11188","ZombieDaddy","Zuchtferkel","Züpfeklatscha"];
+// ══════════════════════════════════════════════════════
+//  INY RANKING – Google Sheets API (Apps Script Web-App)
+// ══════════════════════════════════════════════════════
 
-const PREV = {"1MASTER1":3,"7n2allInn":3,"Agathe Power":2,"Andy891":3,"bakyyyy":2,"Bavaria Nicki":3,"Benbiton007":3,"Bienenflüsterer":3,"BlauesUfo":3,"BogdanZr":3,"Bronco BraTzeN":3,"C0T34Z":4,"CB66":2,"CHIQ":3,"Der Große 85":2,"Desperadoid":3,"Dimonhunter":3,"DoDome 90":2,"Doom Eternal 666":2,"Hackepeter Pierro":3,"Holly1811":3,"Hubraum Hugo":3,"IsaRich":3,"ITJA":4,"ivy":4,"Jackira":3,"Jango111234":2,"Jarl Ulfhednar":3,"Jimmy Muffy":3,"Joe Car":3,"John der Admiral":2,"Judge Hupf":3,"K 77":3,"KittyNova":2,"Koanzi":3,"KOM1":3,"KrawallRudi":5,"KRÜMEL":3,"Lion Tooth":4,"LMNTRiX":3,"MannDesFeuers":4,"Marky the Mark":3,"MelonHead sr":3,"Metriker":3,"MGB24":2,"mika 1":2,"MisterMiyagi42":2,"MonGeneral":2,"MR Payne":2,"mrsananas92":2,"Müller214":3,"Ne Yu":2,"Nicole 1803":4,"nika":3,"NSXA":2,"Nuskovic":2,"Nussl7":3,"Oberbefehlshaber Tim":3,"ooo Rowdy ooo":3,"PaMi1":3,"PfirsichtörtchenRed":2,"PIKA ;)":3,"Pipo2288":3,"Plogmann":1,"Resoluke":3,"Roesty":3,"RonRi8":3,"Roth the Redneck":3,"RuckzuckSchorle":3,"Serphiroth":3,"SirBuuumsALot":3,"Snowblinde":3,"Stefan1211":3,"Stefan5678":3,"Steff 68":3,"Tarzan84":3,"Technodrome":3,"Timbo45":3,"Timimi1985":1,"Union Berlin 66":4,"Wolle99":3,"wshbR":3,"WüsTenOachkáTzL":3,"xtremee003":3,"XX El Gore XX":3,"YeehawJute":3,"Yoshi11188":3,"ZombieDaddy":3,"Zuchtferkel":2,"Züpfeklatscha":3};
+// ─── KONFIGURATION ───
+// Ersetze diese URL mit deiner Google Apps Script Web-App URL
+const API = 'https://script.google.com/macros/s/AKfycbxZDjT1AqRxk5DlsfhaTTzW5za8WCZTXGkPnJFhtesd1LmEeVDtL167VrGrdKXIoAwN/exec';
 
-const R5 = new Set(["KrawallRudi"]);
-const R4 = new Set(["ITJA","MR Payne","MonGeneral","MannDesFeuers","C0T34Z","Union Berlin 66","ivy","Lion Tooth","Nicole 1803"]);
+async function api(action, params = {}) {
+  const url = `${API}?action=${action}&${new URLSearchParams(params)}`;
+  const r = await fetch(url);
+  return r.json();
+}
+
+async function apiPost(data) {
+  const r = await fetch(API, {
+    method: 'POST',
+    body: JSON.stringify(data),
+    headers: { 'Content-Type': 'text/plain' }  // text/plain vermeidet CORS preflight
+  });
+  return r.json();
+}
+
+// ─── Gewichtungen (identisch mit Excel Formeln-Sheet Zeile 103) ───
+const W = {
+  vsUnter50: 5, vsTop30: 15, vsTop10: 5, vsAlle: 10,
+  spendeUnter35k: 5, spendeTop20: 5, spendeAlle: 5,
+  wachePkt: 10, wacheOffline: 5, wacheBonus: 15,
+  seTeilnahme: 10, seTop50: 15, seTop20: 10,
+  wuesteAnmeldung: 10, wuesteTeilnahme: 25, wuesteFehlen: 15,
+  inaktiv: 30, schild: 10, mails: 15, falschparken: 10,
+  nap: 30, verhIntern: 15, verhExtern: 30,
+  umfragen: 10, support: 10, feedback: 5
+};
+
+// ─── Punkte-Berechnung (1:1 aus Excel Formeln-Sheet) ───
+function calcPoints(flags) {
+  const has = k => flags[k] ? 1 : 0;
+  const vsGesamt = W.vsAlle - (has('vsUnter50') * W.vsUnter50) + (has('vsTop30') * W.vsTop30) + (has('vsTop10') * W.vsTop10);
+  const vsGew = Math.min(vsGesamt * 5, 140);
+  const spGesamt = W.spendeAlle - (has('spendeUnter35k') * W.spendeUnter35k) + (has('spendeTop20') * W.spendeTop20);
+  const spGew = spGesamt * 7;
+  const wT = has('wache1') + has('wache2') + has('wache3');
+  const wO = has('wache1dmg') + has('wache2dmg') + has('wache3dmg');
+  const wache = (wT * W.wachePkt) + (Math.floor(wT / 2) * W.wacheBonus) - (wO * W.wacheOffline);
+  const se = ((has('seTeilnahme') * W.seTeilnahme) + (has('seTop50') * W.seTop50) + (has('seTop20') * W.seTop20)) * 2;
+  const wu = (has('wuesteAnmeldung') * W.wuesteAnmeldung) + (has('wuesteTeilnahme') * W.wuesteTeilnahme) - (has('wuesteFehlen') * W.wuesteFehlen);
+  const st = (has('inaktiv') * W.inaktiv) + (has('schild') * W.schild) + (has('mails') * W.mails)
+    + (has('falschparken') * W.falschparken) + (has('nap') * W.nap)
+    + (has('verhIntern') * W.verhIntern) + (has('verhExtern') * W.verhExtern);
+  const bo = (has('umfragen') * W.umfragen) + (has('support') * W.support) + (has('feedback') * W.feedback);
+  return vsGew + spGew + wache + se + wu - st + bo;
+}
+
+// ─── Ranking (Excel IFS-Formel in Formeln!AL3) ───
+function calcRanking(points, rank) {
+  if (rank === 4 || rank === 5) return rank;
+  if (points > 179) return 3;
+  if (points > 84) return 2;
+  return 1;
+}
+
 const RC = {1:'#f0a500',2:'#27c97a',3:'#4a9eff',4:'#e05545',5:'#9b6dff'};
 const RL = {1:'Rookie',2:'Pro',3:'Elite',4:'Leader',5:'Chef'};
 
@@ -416,11 +527,15 @@ const CATS = [
   { l:'⭐ Bonus', t:'a', bg:'rgba(240,165,0,0.06)', bc:'rgba(240,165,0,0.2)', lc:'var(--gold)',
     f:[{k:'umfragen',l:'Umfragen',t:'a'},{k:'support',l:'Support',t:'a'},{k:'feedback',l:'Feedback',t:'a'}] }
 ];
-
 const FLAGS = CATS.flatMap(c=>c.f);
+const FLAG_KEYS = FLAGS.map(f=>f.k);
 const LBL = Object.fromEntries(FLAGS.map(f=>[f.k,f.l]));
 const DANGER = new Set(FLAGS.filter(f=>f.t==='r').map(f=>f.k));
 const AMBER = new Set(FLAGS.filter(f=>f.t==='a').map(f=>f.k));
+
+let PREV = {};
+const R5 = new Set();
+const R4 = new Set();
 
 function isFixed(n){return R5.has(n)||R4.has(n);}
 function fixedRank(n){return R5.has(n)?5:R4.has(n)?4:null;}
@@ -428,13 +543,55 @@ function rbClass(r){return 'rb'+r;}
 
 // ── STATE ──
 let kw=15, entries=[], activeFilter='all', listFilter='all', search='', edName=null, edFlags={}, edRank=3;
+let members = [];
+let historyData = [];
 
-function sk(){return `iny_kw${kw}`;}
-function save(){localStorage.setItem(sk(),JSON.stringify(entries));}
-function load(){try{const d=localStorage.getItem(sk());entries=d?JSON.parse(d):[];}catch(e){entries=[];}}
+// ══════════════════════════════════════════════════════
+//  Daten laden/speichern via Google Apps Script API
+// ══════════════════════════════════════════════════════
+
+async function loadMembers() {
+  const data = await api('members');
+  members = []; PREV = {}; R4.clear(); R5.clear();
+  if (!data || data.error) return;
+  data.forEach(m => {
+    members.push(m.name);
+    PREV[m.name] = m.rank;
+    if (m.role === 'r4' || m.rank === 4) R4.add(m.name);
+    if (m.role === 'r5' || m.rank === 5) R5.add(m.name);
+  });
+}
+
+async function loadEntries() {
+  const data = await api('entries', { kw });
+  entries = [];
+  if (!data || data.error) return;
+  data.forEach(e => {
+    const flags = e.flags || {};
+    const pts = e.points != null ? e.points : calcPoints(flags);
+    const baseRank = e.rank || PREV[e.name] || 3;
+    const nr = e.newRank != null ? e.newRank : calcRanking(pts, baseRank);
+    entries.push({
+      name: e.name,
+      rank: nr,
+      baseRank: baseRank,
+      flags: flags,
+      points: pts,
+      afk: e.afk || !!flags.afk
+    });
+  });
+}
+
+async function loadHistory() {
+  historyData = await api('history') || [];
+}
+
+async function saveEntry(name, rank, flags) {
+  await apiPost({ action: 'save_entry', name, rank, flags });
+  await loadEntries();
+}
 
 kw=parseInt(document.getElementById('kwInput').value);
-load();
 
 // ── RANK BUTTONS ──
 document.getElementById('rankRow').addEventListener('click',function(e){
@@ -502,13 +659,12 @@ function toggleFlag(k){
 window.toggleFlag=toggleFlag;
 
 // ── SAVE ──
-document.getElementById('saveBtn').addEventListener('click',function(){
+document.getElementById('saveBtn').addEventListener('click',async function(){
   if(!edName) return;
   const rank=isFixed(edName)?fixedRank(edName):edRank;
   const was=!!entries.find(x=>x.name===edName);
-  entries=entries.filter(x=>x.name!==edName);
-  entries.push({name:edName,rank,flags:{...edFlags}});
-  save(); renderAll();
+  await saveEntry(edName, rank, {...edFlags});
+  renderAll();
   toast(edName+(was?' aktualisiert!':' gespeichert!'));
   closeEditor();
 });
@@ -530,17 +686,21 @@ document.querySelectorAll('[data-lf]').forEach(b=>b.addEventListener('click',fun
 }));
 
 // ── KW ──
-function kwChanged(){kw=parseInt(document.getElementById('kwInput').value);load();renderAll();}
+async function kwChanged(){kw=parseInt(document.getElementById('kwInput').value);try{await loadEntries();}catch(e){} renderAll();}
 
 // ── NAV ──
-function showPage(id){
+async function showPage(id){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
   document.getElementById('tab-d').classList.toggle('active',id==='d');
   document.getElementById('tab-e').classList.toggle('active',id==='e');
+  document.getElementById('tab-w').classList.toggle('active',id==='w');
   document.getElementById('tab-v').classList.toggle('active',id==='v');
+  // Bei Tab-Wechsel: Daten neu laden
+  await loadEntries();
   if(id==='d') renderDashboard();
   if(id==='e') renderList();
+  if(id==='w') renderWache();
   if(id==='v') renderVerwaltung();
 }
 
@@ -716,21 +876,104 @@ function toast(msg){
   setTimeout(()=>t.classList.remove('show'),2200);
 }
 
-// ── VERWALTUNG ──
-let members = [...MEMBERS];
-const MK = 'iny_members', RK = 'iny_roles';
+// ══════════════════════════════════════════════════════
+//  WACHE-VERWALTUNG
+// ══════════════════════════════════════════════════════
+let activeWache = 1;
 
-function loadMembers(){
-  try{
-    const m=localStorage.getItem(MK), r=localStorage.getItem(RK);
-    if(m) members=JSON.parse(m);
-    if(r){ const roles=JSON.parse(r); R5.clear(); R4.clear(); (roles.r5||[]).forEach(n=>R5.add(n)); (roles.r4||[]).forEach(n=>R4.add(n)); }
-  }catch(e){}
+function selectWache(n) {
+  activeWache = n;
+  document.querySelectorAll('.wache-tab').forEach(b => b.classList.toggle('on', parseInt(b.dataset.wn) === n));
+  renderWache();
 }
-function saveMembers(){ localStorage.setItem(MK,JSON.stringify(members)); localStorage.setItem(RK,JSON.stringify({r5:[...R5],r4:[...R4]})); }
-loadMembers();
 
+function renderWache() {
+  const grid = document.getElementById('wache-grid');
+  const wKey = 'wache' + activeWache;
+  const wDmgKey = 'wache' + activeWache + 'dmg';
+
+  let teilCount = 0;
+  grid.innerHTML = members.map(name => {
+    const e = entries.find(x => x.name === name);
+    const flags = e ? e.flags : {};
+    const teil = !!flags[wKey];
+    const dmg = !!flags[wDmgKey];
+    if (teil) teilCount++;
+
+    const rank = e ? e.rank : (isFixed(name) ? fixedRank(name) : (PREV[name] || 3));
+    const cls = dmg ? 'w-dmg' : teil ? 'w-ok' : 'w-none';
+    const esc = name.replace(/'/g,"\\'");
+
+    const btnBad = `<button class="wt-btn ${dmg?'on-bad':''}" onclick="wacheSet('${esc}','bad')" title="kein DMG (Strafe)">${dmg?'⚠ kein DMG':'💀'}</button>`;
+    const btnGood = `<button class="wt-btn ${(teil&&!dmg)?'on-good':''}" onclick="wacheSet('${esc}','good')" title="guter DMG">${(teil&&!dmg)?'⚔ gut':'⚔'}</button>`;
+
+    return `<div class="wache-tile ${cls}">
+      <div class="wt-top">
+        <div class="wt-name">${name}</div>
+        <div class="wt-rank" style="color:${RC[rank]||'#888'}">R${rank} · ${RL[rank]||''}</div>
+      </div>
+      <div class="wt-btns">${btnBad}${btnGood}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('w-counter').textContent = `${teilCount} / ${members.length}`;
+}
+
+// Kachel-Button: 'bad' = Teilnahme + kein DMG, 'good' = nur Teilnahme
+async function wacheSet(name, type) {
+  const wKey = 'wache' + activeWache;
+  const wDmgKey = 'wache' + activeWache + 'dmg';
+  let e = entries.find(x => x.name === name);
+  if (!e) {
+    const rank = isFixed(name) ? fixedRank(name) : (PREV[name] || 3);
+    e = { name, rank, baseRank: rank, flags: {}, points: 0, afk: false };
+    entries.push(e);
+  }
+  const flags = e.flags;
+
+  if (type === 'bad') {
+    if (flags[wDmgKey]) {
+      // Toggle aus
+      delete flags[wKey];
+      delete flags[wDmgKey];
+    } else {
+      flags[wKey] = true;
+      flags[wDmgKey] = true;
+    }
+  } else {
+    if (flags[wKey] && !flags[wDmgKey]) {
+      // Toggle aus
+      delete flags[wKey];
+    } else {
+      flags[wKey] = true;
+      delete flags[wDmgKey];
+    }
+  }
+
+  e.points = calcPoints(flags);
+  e.rank = calcRanking(e.points, e.baseRank || PREV[name] || 3);
+  renderWache();
+
+  try {
+    await apiPost({
+      action: 'save_wache',
+      name,
+      flags: {
+        wache1: !!e.flags.wache1, wache1dmg: !!e.flags.wache1dmg,
+        wache2: !!e.flags.wache2, wache2dmg: !!e.flags.wache2dmg,
+        wache3: !!e.flags.wache3, wache3dmg: !!e.flags.wache3dmg
+      }
+    });
+  } catch(err) {
+    toast('Fehler: ' + err.message);
+  }
+}
+window.wacheSet = wacheSet;
+window.selectWache = selectWache;
+
+// ── VERWALTUNG ──
 let vNewRank=3;
+
 document.querySelectorAll('.vrank-btn').forEach(btn=>{
   btn.addEventListener('click',function(){
     vNewRank=parseInt(this.dataset.vr);
@@ -738,15 +981,13 @@ document.querySelectorAll('.vrank-btn').forEach(btn=>{
   });
 });
 
-document.getElementById('v-add-btn').addEventListener('click',function(){
+document.getElementById('v-add-btn').addEventListener('click',async function(){
   const name=document.getElementById('v-new-name').value.trim();
   if(!name){toast('Bitte einen Namen eingeben!');return;}
   if(members.includes(name)){toast('Mitglied existiert bereits!');return;}
-  members.push(name);
-  PREV[name]=vNewRank;
-  if(vNewRank===4) R4.add(name);
-  if(vNewRank===5) R5.add(name);
-  saveMembers();
+  const role = vNewRank===5?'r5':vNewRank===4?'r4':'normal';
+  await apiPost({ action: 'add_member', name, rank: vNewRank, role });
+  await loadMembers();
   document.getElementById('v-new-name').value='';
   renderVerwaltung();
   toast(name+' hinzugefügt!');
@@ -797,33 +1038,62 @@ function startEdit(name){ editingMember=name; renderVerwaltung(document.getEleme
 function cancelEdit(){ editingMember=null; renderVerwaltung(document.getElementById('v-search').value.toLowerCase()); }
 window.startEdit=startEdit; window.cancelEdit=cancelEdit;
 
-function saveMemberEdit(oldName){
+async function saveMemberEdit(oldName){
   const newName=document.getElementById('v-edit-input')?.value.trim();
   const newRank=parseInt(document.getElementById('v-edit-rank')?.value||3);
   if(!newName){toast('Name darf nicht leer sein!');return;}
-  const idx=members.indexOf(oldName);
-  if(idx>-1) members[idx]=newName;
-  R5.delete(oldName); R4.delete(oldName);
-  if(newRank===5) R5.add(newName);
-  else if(newRank===4) R4.add(newName);
-  PREV[newName]=newRank;
-  if(newName!==oldName){ delete PREV[oldName]; entries=entries.map(e=>e.name===oldName?{...e,name:newName}:e); save(); }
-  saveMembers(); editingMember=null;
+  const role = newRank===5?'r5':newRank===4?'r4':'normal';
+  await apiPost({ action: 'edit_member', oldName, newName, rank: newRank, role });
+  await loadMembers();
+  await loadEntries();
+  editingMember=null;
   renderVerwaltung(document.getElementById('v-search').value.toLowerCase());
   toast(newName+' gespeichert!');
 }
 window.saveMemberEdit=saveMemberEdit;
 
-function removeMember(name){
+async function removeMember(name){
   if(!confirm('"'+name+'" wirklich entfernen?')) return;
-  members=members.filter(n=>n!==name); R4.delete(name); R5.delete(name);
-  entries=entries.filter(e=>e.name!==name); save(); saveMembers();
+  await apiPost({ action: 'delete_member', name });
+  await loadMembers();
+  await loadEntries();
   renderVerwaltung(document.getElementById('v-search').value.toLowerCase());
   renderDashboard(); toast(name+' entfernt!');
 }
 window.removeMember=removeMember;
 
-renderAll();
+// ── SYNC ──
+async function syncData(){
+  const btn = document.getElementById('btn-sync');
+  btn.classList.add('spinning');
+  try {
+    await loadMembers();
+    await loadEntries();
+    await loadHistory();
+    renderAll();
+    // Auch Wache rendern falls aktiv
+    if(document.getElementById('page-w').classList.contains('active')) renderWache();
+    toast('Daten synchronisiert!');
+  } catch(e) {
+    toast('Sync-Fehler: ' + e.message);
+  } finally {
+    btn.classList.remove('spinning');
+  }
+}
+window.syncData = syncData;
+
+// ── INIT ──
+async function initApp(){
+  try {
+    await loadMembers();
+    await loadEntries();
+    renderAll();
+  } catch(e) {
+    toast('Fehler beim Laden: ' + e.message);
+  }
+}
+
+initApp();
 </script>
 </body>
 </html>

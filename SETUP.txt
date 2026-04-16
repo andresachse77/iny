@@ -1,0 +1,98 @@
+═══════════════════════════════════════════════════════
+  INY RANKING – SETUP ANLEITUNG (Google Sheets)
+═══════════════════════════════════════════════════════
+
+1. GOOGLE SHEET ERSTELLEN
+   ─────────────────────
+   • Gehe zu https://sheets.google.com und erstelle ein neues Spreadsheet
+   • Benenne es "INY Ranking"
+   • Erstelle 2 Sheets (Tabs unten):
+     - "Eingaben"  → für aktuelle Wochendaten
+     - "Historie"  → für Wochenarchiv
+
+   Sheet "Eingaben" (Zeile 1-2 = Header):
+   ┌─────┬────────┬──────────┬────────┬─────────┬─── ... ───┬──────┬─────┐
+   │  A  │   B    │    C     │   D    │    E    │           │  AC  │ AD  │
+   │ Name│vsUnter50│vsTop30  │vsTop10 │spendeU. │   ...     │ Rank │ AFK │
+   └─────┴────────┴──────────┴────────┴─────────┴─── ... ───┴──────┴─────┘
+   • Spalte A: Mitgliedername
+   • Spalten B-AB: Flags (Werte: "x" oder leer)
+   • Spalte AC (29): Aktueller Rang (1-5)
+   • Spalte AD (30): AFK ("x" oder leer)
+   • Trage alle Mitglieder ab Zeile 3 ein
+
+   Sheet "Historie" (Zeile 1 = KW-Header):
+   ┌─────┬───────┬───────┬─── ... ───┐
+   │  A  │   B   │   C   │           │
+   │ Name│KW akt.│KW vor │   ...     │
+   └─────┴───────┴───────┴─── ... ───┘
+   • Spalte A: Name (gleiche wie in Eingaben)
+   • Spalten B+: Ränge je Kalenderwoche
+   • Daten ab Zeile 3
+
+2. APPS SCRIPT EINRICHTEN
+   ──────────────────────
+   • Im Google Sheet: Erweiterungen → Apps Script
+   • Den gesamten Inhalt von "google_apps_script.js" in Code.gs einfügen
+   • Speichern (Strg+S)
+
+3. ALS WEB-APP DEPLOYEN
+   ────────────────────
+   • In Apps Script: Bereitstellen → Neue Bereitstellung
+   • Typ: "Web-App"
+   • Beschreibung: "INY Ranking API"
+   • Ausführen als: "Ich" (dein Google-Konto)
+   • Zugriff: "Jeder" (damit die HTML-Seite darauf zugreifen kann)
+   • → "Bereitstellen" klicken
+   • Die angezeigte URL kopieren (sieht aus wie:
+     https://script.google.com/macros/s/ABCDE.../exec)
+
+   WICHTIG: Bei Änderungen am Script musst du eine NEUE Bereitstellung
+   erstellen (nicht "Bereitstellung verwalten"), damit die Änderungen
+   live werden!
+
+4. URL IN INDEX.HTML EINTRAGEN
+   ──────────────────────────
+   • Öffne index.html
+   • Zeile ~7: const API = 'DEINE_APPS_SCRIPT_URL_HIER';
+   • Ersetze den Platzhalter mit deiner Web-App URL
+
+5. TESTEN
+   ──────
+   • Öffne index.html im Browser (doppelklick oder Live Server)
+   • Die App sollte die Mitglieder aus dem Google Sheet laden
+   • Teste: Eingabe speichern, Mitglied hinzufügen, Dashboard
+
+6. AUF NETLIFY DEPLOYEN (optional)
+   ─────────────────────────────
+   • Gehe zu https://app.netlify.com
+   • "Add new site" → "Import an existing project"
+   • Verbinde dein Git-Repository (GitHub/GitLab)
+   • Build-Einstellungen: keine nötig (statische HTML)
+   • Deploy! → Seite ist unter iny.netlify.app erreichbar
+
+7. WÖCHENTLICHER ABLAUF
+   ────────────────────
+   • Flags eintragen über die Eingabe-Seite
+   • Am Ende der Woche: Archivierung auslösen
+     (per API-Call oder manuell im Script: archiveWeek({kw: XX}))
+   • Ränge werden automatisch berechnet
+   • Neue Woche: Flags werden zurückgesetzt, Ränge übernommen
+
+
+═══════════════════════════════════════════════════════
+  HINWEISE
+═══════════════════════════════════════════════════════
+
+• Alle Daten bleiben in deinem Google Sheet.
+  Es gibt keinen externen Server – die Apps Script Web-App
+  läuft auf Googles Infrastruktur (kostenlos).
+
+• Bei Änderungen am Apps Script Code: neue Bereitstellung
+  erstellen, damit die URL die aktualisierten Funktionen nutzt.
+
+• Lokal testen: index.html einfach im Browser öffnen.
+  CORS wird durch Apps Script automatisch behandelt.
+
+• Google Sheets kann parallel von mehreren Personen
+  bearbeitet werden – ideal für Team-Eingaben.
