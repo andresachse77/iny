@@ -1,0 +1,14 @@
+# Lokale Dateien
+*.xlsx
+*.db
+*.pyc
+__pycache__/
+archive/
+.vscode/
+
+# Alte/lokale Scripts
+server.py
+init_db.py
+create_excel.py
+create_google_sheet.py
+SETUP.txt
