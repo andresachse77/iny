@@ -97,6 +97,7 @@ function doPost(e) {
       case 'save_entry': result = saveEntry(data); break;
       case 'save_wache': result = saveWache(data); break;
       case 'save_wueste': result = saveWueste(data); break;
+      case 'save_spezial': result = saveSpezial(data); break;
       case 'add_member': result = addMember(data); break;
       case 'edit_member':
       case 'update_member': result = updateMember(data); break;
@@ -262,6 +263,25 @@ function saveWueste(data) {
   const row = rowIdx + 3;
   const wuesteFlags = ['wuesteAnmeldung','wuesteTeilnahme','wuesteFehlen'];
   wuesteFlags.forEach(k => {
+    const colIdx = FLAG_COLS.indexOf(k);
+    if (colIdx >= 0) {
+      ws.getRange(row, colIdx + 2).setValue(data.flags[k] ? 'x' : '');
+    }
+  });
+
+  updateErgebnis();
+  return { ok: true, name: data.name };
+}
+
+function saveSpezial(data) {
+  const ws = getSheet('Eingaben');
+  const names = ws.getRange(3, 1, ws.getLastRow() - 2, 1).getValues().flat();
+  const rowIdx = names.indexOf(data.name);
+  if (rowIdx === -1) return { error: 'Mitglied nicht gefunden: ' + data.name };
+
+  const row = rowIdx + 3;
+  const spezialFlags = ['seTeilnahme','seTop50','seTop20'];
+  spezialFlags.forEach(k => {
     const colIdx = FLAG_COLS.indexOf(k);
     if (colIdx >= 0) {
       ws.getRange(row, colIdx + 2).setValue(data.flags[k] ? 'x' : '');

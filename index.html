@@ -293,7 +293,10 @@ nav {
 .wache-tile.w-dmg { border-color:rgba(224,85,69,0.4); }
 .wache-tile.w-none { opacity:0.5; }
 .wache-tile.w-anm { border-color:rgba(74,158,255,0.4); }
+.wache-tile.w-top20 { border-color:rgba(240,165,0,0.5); }
+.wache-tile.w-top50 { border-color:rgba(46,203,122,0.4); }
 .wt-btn.on-anm { background:rgba(74,158,255,0.12); color:var(--blue); }
+.wt-btn.on-gold { background:rgba(240,165,0,0.15); color:var(--gold); }
 .wache-legend { display:flex; gap:16px; margin-bottom:1rem; font-size:12px; color:var(--soft); align-items:center; flex-wrap:wrap; }
 .wache-legend span { display:flex; align-items:center; gap:4px; }
 .wache-counter { font-family:'Rajdhani',sans-serif; font-size:14px; font-weight:700; color:var(--gold); }
@@ -323,6 +326,7 @@ nav {
     <button class="tab" id="tab-e" onclick="showPage('e')">Eingabe</button>
     <button class="tab" id="tab-w" onclick="showPage('w')">Wache</button>
     <button class="tab" id="tab-wu" onclick="showPage('wu')">Wüste</button>
+    <button class="tab" id="tab-se" onclick="showPage('se')">Spezialevents</button>
     <button class="tab" id="tab-v" onclick="showPage('v')">Verwaltung</button>
   </div>
   <button class="sync-btn" id="btn-sync" onclick="syncData()" title="Daten neu laden">🔄</button>
@@ -468,6 +472,25 @@ nav {
     </div>
 
     <div class="wache-grid" id="wueste-grid"></div>
+  </div>
+</div>
+
+<!-- ═══ SPEZIALEVENTS ═══ -->
+<div class="page" id="page-se">
+  <div class="panel">
+    <div class="panel-head">
+      <div class="panel-title">🎯 Spezialevents</div>
+      <div class="panel-sub">Teilnahme · Top 50 · Top 20</div>
+    </div>
+
+    <div class="wache-legend">
+      <span><span style="color:var(--blue);">⚔</span> Teilnahme</span>
+      <span><span style="color:var(--green);">🏅</span> Top 50</span>
+      <span><span style="color:var(--gold);">🏆</span> Top 20</span>
+      <span style="margin-left:auto;" class="wache-counter" id="se-counter">0 / 0</span>
+    </div>
+
+    <div class="wache-grid" id="spezial-grid"></div>
   </div>
 </div>
 
@@ -827,6 +850,7 @@ async function showPage(id){
   document.getElementById('tab-e').classList.toggle('active',id==='e');
   document.getElementById('tab-w').classList.toggle('active',id==='w');
   document.getElementById('tab-wu').classList.toggle('active',id==='wu');
+  document.getElementById('tab-se').classList.toggle('active',id==='se');
   document.getElementById('tab-v').classList.toggle('active',id==='v');
   // Bei Tab-Wechsel: Daten neu laden
   await loadEntries();
@@ -834,6 +858,7 @@ async function showPage(id){
   if(id==='e') renderList();
   if(id==='w') renderWache();
   if(id==='wu') renderWueste();
+  if(id==='se') renderSpezial();
   if(id==='v') renderVerwaltung();
 }
 
@@ -1193,6 +1218,98 @@ async function wuesteSet(name, type) {
 }
 window.wuesteSet = wuesteSet;
 
+// ══════════════════════════════════════════════════════
+//  SPEZIALEVENTS
+// ══════════════════════════════════════════════════════
+function renderSpezial() {
+  const grid = document.getElementById('spezial-grid');
+  let teilCount = 0;
+
+  grid.innerHTML = members.map(name => {
+    const e = entries.find(x => x.name === name);
+    const flags = e ? e.flags : {};
+    const teil = !!flags.seTeilnahme;
+    const t50 = !!flags.seTop50;
+    const t20 = !!flags.seTop20;
+    if (teil) teilCount++;
+
+    const rank = isFixed(name) ? fixedRank(name) : (PREV[name] || 3);
+    const cls = t20 ? 'w-top20' : t50 ? 'w-top50' : teil ? 'w-anm' : 'w-none';
+    const esc = name.replace(/'/g,"\\'");
+
+    const btnTeil = `<button class="wt-btn ${teil?'on-anm':''}" onclick="spezialSet('${esc}','teil')" title="Teilnahme">${teil?'⚔ teil':'⚔'}</button>`;
+    const btn50  = `<button class="wt-btn ${t50?'on-good':''}" onclick="spezialSet('${esc}','t50')" title="Top 50">${t50?'🏅 T50':'🏅'}</button>`;
+    const btn20  = `<button class="wt-btn ${t20?'on-gold':''}" onclick="spezialSet('${esc}','t20')" title="Top 20">${t20?'🏆 T20':'🏆'}</button>`;
+
+    return `<div class="wache-tile ${cls}">
+      <div class="wt-top">
+        <div class="wt-name">${name}</div>
+        <div class="wt-rank" style="color:${RC[rank]||'#888'}">R${rank} · ${RL[rank]||''}</div>
+      </div>
+      <div class="wt-btns">${btnTeil}${btn50}${btn20}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('se-counter').textContent = `${teilCount} / ${members.length}`;
+}
+
+// Hierarchie: Top 20 impliziert Top 50 impliziert Teilnahme (beim Einschalten)
+async function spezialSet(name, type) {
+  let e = entries.find(x => x.name === name);
+  if (!e) {
+    const rank = isFixed(name) ? fixedRank(name) : (PREV[name] || 3);
+    e = { name, rank, baseRank: rank, flags: {}, points: 0, afk: false };
+    entries.push(e);
+  }
+  const flags = e.flags;
+
+  if (type === 'teil') {
+    if (flags.seTeilnahme) {
+      // Aus → alles weg
+      delete flags.seTeilnahme;
+      delete flags.seTop50;
+      delete flags.seTop20;
+    } else {
+      flags.seTeilnahme = true;
+    }
+  } else if (type === 't50') {
+    if (flags.seTop50) {
+      delete flags.seTop50;
+      delete flags.seTop20;
+    } else {
+      flags.seTeilnahme = true;
+      flags.seTop50 = true;
+    }
+  } else if (type === 't20') {
+    if (flags.seTop20) {
+      delete flags.seTop20;
+    } else {
+      flags.seTeilnahme = true;
+      flags.seTop50 = true;
+      flags.seTop20 = true;
+    }
+  }
+
+  e.points = calcPoints(flags);
+  e.rank = calcRanking(e.points, e.baseRank || PREV[name] || 3);
+  renderSpezial();
+
+  try {
+    await apiPost({
+      action: 'save_spezial',
+      name,
+      flags: {
+        seTeilnahme: !!e.flags.seTeilnahme,
+        seTop50: !!e.flags.seTop50,
+        seTop20: !!e.flags.seTop20
+      }
+    });
+  } catch(err) {
+    toast('Fehler: ' + err.message);
+  }
+}
+window.spezialSet = spezialSet;
+
 // ── VERWALTUNG ──
 let vNewRank=3;
 
@@ -1292,9 +1409,10 @@ async function syncData(){
     await loadEntries();
     await loadHistory();
     renderAll();
-    // Auch Wache/Wüste rendern falls aktiv
+    // Auch Wache/Wüste/Spezial rendern falls aktiv
     if(document.getElementById('page-w').classList.contains('active')) renderWache();
     if(document.getElementById('page-wu').classList.contains('active')) renderWueste();
+    if(document.getElementById('page-se').classList.contains('active')) renderSpezial();
     toast('Daten synchronisiert!');
   } catch(e) {
     toast('Sync-Fehler: ' + e.message);
