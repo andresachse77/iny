@@ -176,13 +176,21 @@ nav {
   border: 1px solid var(--line); background: var(--card2);
   cursor: pointer; transition: all 0.15s; text-align: center;
 }
-.rk-btn:hover:not(:disabled) { border-color: var(--gold); }
-.rk-btn.on { background: var(--gold); border-color: var(--gold); }
+.rk-btn[data-r="1"] .rk-num, .rk-btn[data-r="1"] .rk-lbl { color: var(--gold); }
+.rk-btn[data-r="2"] .rk-num, .rk-btn[data-r="2"] .rk-lbl { color: var(--green); }
+.rk-btn[data-r="3"] .rk-num, .rk-btn[data-r="3"] .rk-lbl { color: var(--blue); }
+.rk-btn[data-r="4"] .rk-num, .rk-btn[data-r="4"] .rk-lbl { color: var(--red); }
+.rk-btn[data-r="5"] .rk-num, .rk-btn[data-r="5"] .rk-lbl { color: var(--purple); }
+.rk-btn:hover:not(:disabled) { border-color: currentColor; }
+.rk-btn[data-r="1"].on { background: rgba(240,165,0,0.15); border-color: var(--gold); }
+.rk-btn[data-r="2"].on { background: rgba(46,203,122,0.15); border-color: var(--green); }
+.rk-btn[data-r="3"].on { background: rgba(74,158,255,0.15); border-color: var(--blue); }
+.rk-btn[data-r="4"].on { background: rgba(224,85,69,0.15); border-color: var(--red); }
+.rk-btn[data-r="5"].on { background: rgba(155,109,255,0.15); border-color: var(--purple); }
 .rk-btn:disabled { opacity: 0.28; cursor: not-allowed; }
-.rk-num { font-family: 'Rajdhani', sans-serif; font-size: 20px; font-weight: 700; color: var(--text); line-height: 1; }
-.rk-btn.on .rk-num { color: #000; }
-.rk-lbl { font-size: 10px; color: var(--soft); margin-top: 2px; }
-.rk-btn.on .rk-lbl { color: rgba(0,0,0,0.6); }
+.rk-num { font-family: 'Rajdhani', sans-serif; font-size: 20px; font-weight: 700; line-height: 1; }
+.rk-lbl { font-size: 10px; margin-top: 2px; opacity: 0.75; }
+.rk-btn.on .rk-lbl { opacity: 1; }
 
 .fixed-note { display: none; font-size: 12px; color: var(--gold); padding: 6px 10px; background: rgba(240,165,0,0.08); border: 1px solid rgba(240,165,0,0.2); border-radius: 6px; margin-bottom: 0.75rem; }
 
@@ -235,9 +243,18 @@ nav {
 .vlabel { font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--soft); margin-bottom:6px; }
 .vinput { width:100%; background:var(--card2); border:1px solid var(--line2); border-radius:8px; color:var(--text); font-size:14px; padding:8px 12px; outline:none; font-family:'Inter',sans-serif; }
 .vinput:focus { border-color:var(--gold); }
-.vrank-btn { padding:5px 12px; font-size:12px; border-radius:6px; border:1px solid var(--line); background:var(--card2); color:var(--soft); cursor:pointer; font-family:'Inter',sans-serif; transition:all 0.15s; white-space:nowrap; }
-.vrank-btn.on { background:var(--gold); border-color:var(--gold); color:#000; font-weight:600; }
-.vrank-btn:hover:not(.on) { border-color:var(--line2); color:var(--text); }
+.vrank-btn { padding:5px 12px; font-size:12px; border-radius:6px; border:1px solid var(--line); background:var(--card2); cursor:pointer; font-family:'Inter',sans-serif; transition:all 0.15s; white-space:nowrap; font-weight:500; }
+.vrank-btn[data-vr="1"] { color: var(--gold); }
+.vrank-btn[data-vr="2"] { color: var(--green); }
+.vrank-btn[data-vr="3"] { color: var(--blue); }
+.vrank-btn[data-vr="4"] { color: var(--red); }
+.vrank-btn[data-vr="5"] { color: var(--purple); }
+.vrank-btn[data-vr="1"].on { background:rgba(240,165,0,0.18); border-color:var(--gold); }
+.vrank-btn[data-vr="2"].on { background:rgba(46,203,122,0.18); border-color:var(--green); }
+.vrank-btn[data-vr="3"].on { background:rgba(74,158,255,0.18); border-color:var(--blue); }
+.vrank-btn[data-vr="4"].on { background:rgba(224,85,69,0.18); border-color:var(--red); }
+.vrank-btn[data-vr="5"].on { background:rgba(155,109,255,0.18); border-color:var(--purple); }
+.vrank-btn:hover:not(.on) { border-color:currentColor; }
 .v-row { display:flex; align-items:center; gap:12px; padding:9px 12px; border-bottom:1px solid var(--line); }
 .v-row:last-child { border-bottom:none; }
 .v-row:hover { background:var(--card2); border-radius:6px; }
@@ -447,11 +464,11 @@ nav {
         <div>
           <div class="vlabel">Rang</div>
           <div style="display:flex;gap:6px;">
-            <button class="vrank-btn on" data-vr="3">3 · Elite</button>
-            <button class="vrank-btn" data-vr="2">2 · Pro</button>
             <button class="vrank-btn" data-vr="1">1 · Rookie</button>
-            <button class="vrank-btn" data-vr="4" style="color:var(--red);">4 · Leader</button>
-            <button class="vrank-btn" data-vr="5" style="color:var(--purple);">5 · Chef</button>
+            <button class="vrank-btn" data-vr="2">2 · Pro</button>
+            <button class="vrank-btn on" data-vr="3">3 · Elite</button>
+            <button class="vrank-btn" data-vr="4">4 · Leader</button>
+            <button class="vrank-btn" data-vr="5">5 · Chef</button>
           </div>
         </div>
         <button class="save-btn" id="v-add-btn" style="margin-top:4px;">+ Hinzufügen</button>
@@ -600,7 +617,7 @@ function calcRanking(points, rank) {
   return 1;
 }
 
-const RC = {1:'#f0a500',2:'#27c97a',3:'#4a9eff',4:'#e05545',5:'#9b6dff'};
+const RC = {1:'#f0a500',2:'#2ecb7a',3:'#4a9eff',4:'#e05545',5:'#9b6dff'};
 const RL = {1:'Rookie',2:'Pro',3:'Elite',4:'Leader',5:'Chef'};
 
 const CATS = [
@@ -821,12 +838,12 @@ function renderList(){
 
   list.innerHTML=shown.map(name=>{
     const e=entries.find(x=>x.name===name);
-    const rank=e?e.rank:(isFixed(name)?fixedRank(name):null);
+    const rank=isFixed(name)?fixedRank(name):(PREV[name]||3);
     const hasWarn=e?[...DANGER].some(k=>e.flags[k]):false;
     const af=e?Object.keys(e.flags).filter(k=>e.flags[k]):[];
 
     const statusIcon=!e?'<span style="color:var(--softer)">○</span>':hasWarn?'<span style="color:var(--red)">⚠</span>':'<span style="color:var(--green)">✓</span>';
-    const rankBadge=rank?`<span class="rank-badge ${rbClass(rank)}">${rank} · ${RL[rank]}</span>`:'<span style="color:var(--softer);font-size:12px;">—</span>';
+    const rankBadge=`<span class="rank-badge ${rbClass(rank)}">${rank} · ${RL[rank]}</span>`;
     const fixedBadge=isFixed(name)?` <span style="font-size:10px;color:var(--gold);margin-left:3px;">${R5.has(name)?'R5':'R4'}</span>`:'';
     const tags=af.slice(0,3).map(k=>{
       const cls=DANGER.has(k)?'r':AMBER.has(k)?'a':'b';
@@ -879,14 +896,19 @@ function renderDashboard(){
   }).sort((a,b)=>b.score-a.score);
   document.getElementById('top-list').innerHTML=sc.length===0
     ?'<div class="empty" style="padding:0.5rem 0;">Noch keine Einträge.</div>'
-    :sc.slice(0,8).map((e,i)=>`<div class="top-row">
+    :sc.slice(0,8).map((e,i)=>{
+      const br=isFixed(e.name)?fixedRank(e.name):(PREV[e.name]||3);
+      return `<div class="top-row">
       <div class="top-pos ${i===0?'p1':i===1?'p2':i===2?'p3':''}">${i+1}</div>
       <div class="top-name">${e.name}</div>
-      <div class="rank-badge ${rbClass(e.rank)}">${e.rank} · ${RL[e.rank]}</div>
-    </div>`).join('');
+      <div class="rank-badge ${rbClass(br)}">${br} · ${RL[br]}</div>
+    </div>`;}).join('');
 
   const dist={1:0,2:0,3:0,4:0,5:0};
-  entries.forEach(e=>dist[e.rank]=(dist[e.rank]||0)+1);
+  members.forEach(name=>{
+    const r=isFixed(name)?fixedRank(name):(PREV[name]||3);
+    dist[r]=(dist[r]||0)+1;
+  });
   const maxD=Math.max(...Object.values(dist),1);
   document.getElementById('rdist').innerHTML=[1,2,3,4,5].map(r=>{
     const cnt=dist[r]||0, h=Math.round(cnt/maxD*60);
@@ -917,11 +939,11 @@ function renderTable(){
   document.querySelectorAll('.flt[data-f]').forEach(b=>b.classList.toggle('on',b.dataset.f===activeFilter));
   const rows=members.map(name=>{
     const e=entries.find(x=>x.name===name);
-    const rank=e?e.rank:(isFixed(name)?fixedRank(name):null);
-    const prev=isFixed(name)?fixedRank(name):(PREV[name]||3);
+    const baseRank=isFixed(name)?fixedRank(name):(PREV[name]||3);
+    const newRank=e?e.rank:baseRank;
     const hasEntry=!!e, hasWarn=e?[...DANGER].some(k=>e.flags[k]):false;
-    const tend=hasEntry&&!isFixed(name)?rank-prev:0;
-    return{name,rank,hasEntry,hasWarn,tend,flags:e?e.flags:{}};
+    const tend=hasEntry&&!isFixed(name)?newRank-baseRank:0;
+    return{name,rank:baseRank,hasEntry,hasWarn,tend,flags:e?e.flags:{}};
   }).filter(r=>{
     if(activeFilter==='warn') return r.hasWarn;
     if(activeFilter==='up') return r.tend<0;
@@ -936,7 +958,7 @@ function renderTable(){
   let pos=0;
   tbody.innerHTML=rows.map(r=>{
     if(r.hasEntry) pos++;
-    const rb=r.rank?`<span class="rank-badge ${rbClass(r.rank)}">${r.rank} · ${RL[r.rank]}</span>`:'<span style="color:var(--softer)">—</span>';
+    const rb=`<span class="rank-badge ${rbClass(r.rank)}">${r.rank} · ${RL[r.rank]}</span>`;
     const th=isFixed(r.name)?'<span class="t-eq">—</span>':r.tend<0?`<span class="t-up">↑ ${Math.abs(r.tend)}</span>`:r.tend>0?`<span class="t-dn">↓ ${r.tend}</span>`:'<span class="t-eq">=</span>';
     const af=Object.keys(r.flags).filter(k=>r.flags[k]);
     const fh=af.length
@@ -1102,7 +1124,6 @@ function renderVerwaltung(filter=''){
 
   list.innerHTML=shown.map(name=>{
     const role=R5.has(name)?5:R4.has(name)?4:(PREV[name]||3);
-    const bs=role===5?'background:rgba(155,109,255,0.15);color:var(--purple);border:1px solid rgba(155,109,255,0.3);':role===4?'background:rgba(224,85,69,0.15);color:var(--red);border:1px solid rgba(224,85,69,0.3);':'background:rgba(74,158,255,0.12);color:#80b8ff;border:1px solid rgba(74,158,255,0.25);';
     if(editingMember===name){
       return `<div class="v-row">
         <input class="v-name-input" id="v-edit-input" value="${name.replace(/"/g,'&quot;')}" onkeydown="if(event.key==='Enter')saveMemberEdit('${name.replace(/'/g,"\\'")}')">
@@ -1119,7 +1140,7 @@ function renderVerwaltung(filter=''){
     }
     return `<div class="v-row">
       <span class="v-name">${name}</span>
-      <span class="v-badge" style="${bs}">R${role} · ${RL[role]||''}</span>
+      <span class="rank-badge ${rbClass(role)}">R${role} · ${RL[role]||''}</span>
       <button class="v-btn edit" onclick="startEdit('${name.replace(/'/g,"\\'")}')">✏ Bearbeiten</button>
       <button class="v-btn del" onclick="removeMember('${name.replace(/'/g,"\\'")}')">🗑</button>
     </div>`;
