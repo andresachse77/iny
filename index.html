@@ -1109,6 +1109,90 @@ async function wacheSet(name, type) {
 window.wacheSet = wacheSet;
 window.selectWache = selectWache;
 
+// ══════════════════════════════════════════════════════
+//  WÜSTE-VERWALTUNG
+// ══════════════════════════════════════════════════════
+function renderWueste() {
+  const grid = document.getElementById('wueste-grid');
+  let teilCount = 0;
+
+  grid.innerHTML = members.map(name => {
+    const e = entries.find(x => x.name === name);
+    const flags = e ? e.flags : {};
+    const anm = !!flags.wuesteAnmeldung;
+    const teil = !!flags.wuesteTeilnahme;
+    const fehl = !!flags.wuesteFehlen;
+    if (teil) teilCount++;
+
+    const rank = isFixed(name) ? fixedRank(name) : (PREV[name] || 3);
+    const cls = fehl ? 'w-dmg' : teil ? 'w-ok' : anm ? 'w-anm' : 'w-none';
+    const esc = name.replace(/'/g,"\\'");
+
+    const btnAnm  = `<button class="wt-btn ${anm?'on-anm':''}" onclick="wuesteSet('${esc}','anm')" title="Anmeldung">${anm?'📋 an':'📋'}</button>`;
+    const btnTeil = `<button class="wt-btn ${teil?'on-good':''}" onclick="wuesteSet('${esc}','teil')" title="Teilnahme">${teil?'⚔ teil':'⚔'}</button>`;
+    const btnFehl = `<button class="wt-btn ${fehl?'on-bad':''}" onclick="wuesteSet('${esc}','fehl')" title="Fehlen (Strafe)">${fehl?'⚠ fehlt':'💀'}</button>`;
+
+    return `<div class="wache-tile ${cls}">
+      <div class="wt-top">
+        <div class="wt-name">${name}</div>
+        <div class="wt-rank" style="color:${RC[rank]||'#888'}">R${rank} · ${RL[rank]||''}</div>
+      </div>
+      <div class="wt-btns">${btnAnm}${btnTeil}${btnFehl}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('wu-counter').textContent = `${teilCount} / ${members.length}`;
+}
+
+// Kachel-Button: Teilnahme/Fehlen sind gegenseitig exklusiv, Anmeldung unabhängig
+async function wuesteSet(name, type) {
+  let e = entries.find(x => x.name === name);
+  if (!e) {
+    const rank = isFixed(name) ? fixedRank(name) : (PREV[name] || 3);
+    e = { name, rank, baseRank: rank, flags: {}, points: 0, afk: false };
+    entries.push(e);
+  }
+  const flags = e.flags;
+
+  if (type === 'anm') {
+    if (flags.wuesteAnmeldung) delete flags.wuesteAnmeldung;
+    else flags.wuesteAnmeldung = true;
+  } else if (type === 'teil') {
+    if (flags.wuesteTeilnahme) {
+      delete flags.wuesteTeilnahme;
+    } else {
+      flags.wuesteTeilnahme = true;
+      delete flags.wuesteFehlen;
+    }
+  } else if (type === 'fehl') {
+    if (flags.wuesteFehlen) {
+      delete flags.wuesteFehlen;
+    } else {
+      flags.wuesteFehlen = true;
+      delete flags.wuesteTeilnahme;
+    }
+  }
+
+  e.points = calcPoints(flags);
+  e.rank = calcRanking(e.points, e.baseRank || PREV[name] || 3);
+  renderWueste();
+
+  try {
+    await apiPost({
+      action: 'save_wueste',
+      name,
+      flags: {
+        wuesteAnmeldung: !!e.flags.wuesteAnmeldung,
+        wuesteTeilnahme: !!e.flags.wuesteTeilnahme,
+        wuesteFehlen: !!e.flags.wuesteFehlen
+      }
+    });
+  } catch(err) {
+    toast('Fehler: ' + err.message);
+  }
+}
+window.wuesteSet = wuesteSet;
+
 // ── VERWALTUNG ──
 let vNewRank=3;
 
