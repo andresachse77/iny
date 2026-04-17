@@ -699,7 +699,7 @@ function openEditor(name){
   const e=entries.find(x=>x.name===name);
   edFlags=e?{...e.flags}:{};
   const fixed=isFixed(name);
-  edRank=e?e.rank:(fixed?fixedRank(name):(PREV[name]||3));
+  edRank=fixed?fixedRank(name):(PREV[name]||3);
 
   document.getElementById('editorName').textContent=name+(fixed?' · '+(R5.has(name)?'R5 Chef':'R4 Leader'):'');
   document.getElementById('editor').style.display='block';
@@ -992,7 +992,7 @@ function renderWache() {
     const dmg = !!flags[wDmgKey];
     if (teil) teilCount++;
 
-    const rank = e ? e.rank : (isFixed(name) ? fixedRank(name) : (PREV[name] || 3));
+    const rank = isFixed(name) ? fixedRank(name) : (PREV[name] || 3);
     const cls = dmg ? 'w-dmg' : teil ? 'w-ok' : 'w-none';
     const esc = name.replace(/'/g,"\\'");
 
