@@ -1292,8 +1292,9 @@ async function syncData(){
     await loadEntries();
     await loadHistory();
     renderAll();
-    // Auch Wache rendern falls aktiv
+    // Auch Wache/Wüste rendern falls aktiv
     if(document.getElementById('page-w').classList.contains('active')) renderWache();
+    if(document.getElementById('page-wu').classList.contains('active')) renderWueste();
     toast('Daten synchronisiert!');
   } catch(e) {
     toast('Sync-Fehler: ' + e.message);
