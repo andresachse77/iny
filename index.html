@@ -292,6 +292,8 @@ nav {
 .wache-tile.w-ok { border-color:rgba(46,203,122,0.4); }
 .wache-tile.w-dmg { border-color:rgba(224,85,69,0.4); }
 .wache-tile.w-none { opacity:0.5; }
+.wache-tile.w-anm { border-color:rgba(74,158,255,0.4); }
+.wt-btn.on-anm { background:rgba(74,158,255,0.12); color:var(--blue); }
 .wache-legend { display:flex; gap:16px; margin-bottom:1rem; font-size:12px; color:var(--soft); align-items:center; flex-wrap:wrap; }
 .wache-legend span { display:flex; align-items:center; gap:4px; }
 .wache-counter { font-family:'Rajdhani',sans-serif; font-size:14px; font-weight:700; color:var(--gold); }
@@ -320,6 +322,7 @@ nav {
     <button class="tab active" id="tab-d" onclick="showPage('d')">Dashboard</button>
     <button class="tab" id="tab-e" onclick="showPage('e')">Eingabe</button>
     <button class="tab" id="tab-w" onclick="showPage('w')">Wache</button>
+    <button class="tab" id="tab-wu" onclick="showPage('wu')">Wüste</button>
     <button class="tab" id="tab-v" onclick="showPage('v')">Verwaltung</button>
   </div>
   <button class="sync-btn" id="btn-sync" onclick="syncData()" title="Daten neu laden">🔄</button>
@@ -446,6 +449,25 @@ nav {
     </div>
 
     <div class="wache-grid" id="wache-grid"></div>
+  </div>
+</div>
+
+<!-- ═══ WÜSTE ═══ -->
+<div class="page" id="page-wu">
+  <div class="panel">
+    <div class="panel-head">
+      <div class="panel-title">🏜 Wüste-Verwaltung</div>
+      <div class="panel-sub">Anmeldung · Teilnahme · Fehlen (Strafe)</div>
+    </div>
+
+    <div class="wache-legend">
+      <span><span style="color:var(--blue);">📋</span> Anmeldung</span>
+      <span><span style="color:var(--green);">⚔</span> Teilnahme</span>
+      <span><span style="color:var(--red);">⚠</span> Fehlen (Strafe)</span>
+      <span style="margin-left:auto;" class="wache-counter" id="wu-counter">0 / 0</span>
+    </div>
+
+    <div class="wache-grid" id="wueste-grid"></div>
   </div>
 </div>
 
@@ -804,12 +826,14 @@ async function showPage(id){
   document.getElementById('tab-d').classList.toggle('active',id==='d');
   document.getElementById('tab-e').classList.toggle('active',id==='e');
   document.getElementById('tab-w').classList.toggle('active',id==='w');
+  document.getElementById('tab-wu').classList.toggle('active',id==='wu');
   document.getElementById('tab-v').classList.toggle('active',id==='v');
   // Bei Tab-Wechsel: Daten neu laden
   await loadEntries();
   if(id==='d') renderDashboard();
   if(id==='e') renderList();
   if(id==='w') renderWache();
+  if(id==='wu') renderWueste();
   if(id==='v') renderVerwaltung();
 }
 
