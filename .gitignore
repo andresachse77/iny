@@ -12,3 +12,6 @@ init_db.py
 create_excel.py
 create_google_sheet.py
 SETUP.txt
+
+# Auth tokens
+.graph_tokens.json
