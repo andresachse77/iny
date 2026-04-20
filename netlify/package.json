@@ -1,0 +1,12 @@
+{
+  "name": "iny-netlify-functions",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Netlify Functions API for INY ranking with TiDB",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "mysql2": "^3.15.1"
+  }
+}
