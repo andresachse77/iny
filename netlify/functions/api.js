@@ -1,4 +1,5 @@
 const mysql = require('mysql2/promise');
+const { randomUUID } = require('crypto');
 
 const ALLIANCE = process.env.INY_ALLIANCE || 'INY';
 
@@ -109,8 +110,8 @@ async function addMember(con, body) {
   if (!name) return json(400, { error: 'Name fehlt' });
 
   const rank = safeRank(body.default_rank ?? body.rank ?? 3);
-  const playerId = crypto.randomUUID();
-  const nameEventId = crypto.randomUUID();
+  const playerId = randomUUID();
+  const nameEventId = randomUUID();
 
   try {
     await con.beginTransaction();
@@ -176,7 +177,7 @@ async function updateMember(con, oldName, body) {
         INSERT INTO player_name_history (alliance, name_event_id, player_id, player_name, valid_from_yw)
         VALUES (?, ?, ?, ?, 0)
       `,
-      [ALLIANCE, crypto.randomUUID(), playerId, newName]
+      [ALLIANCE, randomUUID(), playerId, newName]
     );
 
     await con.commit();
@@ -268,7 +269,7 @@ async function saveEntry(con, kw, body) {
         [rank, ALLIANCE, playerId]
       );
     } else {
-      playerId = crypto.randomUUID();
+      playerId = randomUUID();
       await con.execute(
         `
           INSERT INTO players (alliance, player_id, current_name, current_rank_code, is_active)
@@ -281,7 +282,7 @@ async function saveEntry(con, kw, body) {
           INSERT INTO player_name_history (alliance, name_event_id, player_id, player_name, valid_from_yw)
           VALUES (?, ?, ?, ?, ?)
         `,
-        [ALLIANCE, crypto.randomUUID(), playerId, name, kw]
+        [ALLIANCE, randomUUID(), playerId, name, kw]
       );
     }
 
@@ -306,7 +307,7 @@ async function saveEntry(con, kw, body) {
         [rank, rank, flags.afk ? 1 : 0, ALLIANCE, entryId]
       );
     } else {
-      entryId = crypto.randomUUID();
+      entryId = randomUUID();
       await con.execute(
         `
           INSERT INTO weekly_entries (alliance, entry_id, year_week, player_id, base_rank_code, final_rank_code, afk)

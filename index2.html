@@ -597,6 +597,7 @@ nav {
 // Optional: ?api=https://dein-api-host/api (wird in localStorage gespeichert)
 const IS_GITHUB_PAGES = window.location.hostname.endsWith('github.io');
 const IS_NETLIFY = window.location.hostname.endsWith('.netlify.app');
+const IS_LOCAL_HOST = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 const apiFromQuery = new URLSearchParams(window.location.search).get('api');
 if (apiFromQuery) {
   localStorage.setItem('iny_api_base', apiFromQuery.replace(/\/$/, ''));
@@ -604,12 +605,21 @@ if (apiFromQuery) {
   history.replaceState(null, '', cleanUrl);
 }
 
-const API_BASE = (localStorage.getItem('iny_api_base') || '').replace(/\/$/, '')
-  || (window.location.protocol === 'file:'
-    ? 'http://127.0.0.1:5000/api'
-    : (IS_NETLIFY
-      ? `${window.location.origin}/.netlify/functions/api`
-      : (IS_GITHUB_PAGES ? '' : `${window.location.origin}/api`)));
+const API_BASE_OVERRIDE = (localStorage.getItem('iny_api_base') || '').replace(/\/$/, '');
+
+function buildApiBaseCandidates() {
+  if (API_BASE_OVERRIDE) return [API_BASE_OVERRIDE];
+  if (window.location.protocol === 'file:') return ['http://127.0.0.1:5000/api'];
+  if (IS_GITHUB_PAGES) return [];
+  if (IS_LOCAL_HOST) return [`${window.location.origin}/api`];
+
+  const fn = `${window.location.origin}/.netlify/functions/api`;
+  const classic = `${window.location.origin}/api`;
+  return IS_NETLIFY ? [fn, classic] : [fn, classic];
+}
+
+const API_BASE_CANDIDATES = buildApiBaseCandidates();
+let activeApiBaseIndex = 0;
 
 // ─── DISCORD OAuth2 ───
 const DISCORD_CLIENT_ID = '1494427568361967626';
@@ -673,13 +683,39 @@ async function checkDiscordAuth() {
   }
 }
 
-async function fetchJson(url, options = {}) {
-  const r = await fetch(url, options);
-  if (!r.ok) {
-    const txt = await r.text();
-    throw new Error(`${r.status} ${r.statusText}${txt ? `: ${txt}` : ''}`);
+async function fetchJson(path, options = {}) {
+  if (!API_BASE_CANDIDATES.length) {
+    throw new Error('API nicht konfiguriert');
   }
-  return r.json();
+
+  let lastError = null;
+
+  for (let i = activeApiBaseIndex; i < API_BASE_CANDIDATES.length; i += 1) {
+    const base = API_BASE_CANDIDATES[i];
+    const url = `${base}${path}`;
+
+    try {
+      const r = await fetch(url, options);
+      if (r.ok) {
+        activeApiBaseIndex = i;
+        return r.json();
+      }
+
+      const txt = await r.text();
+      lastError = new Error(`${r.status} ${r.statusText}${txt ? `: ${txt}` : ''}`);
+
+      if ((r.status === 404 || r.status === 502 || r.status === 503) && i < API_BASE_CANDIDATES.length - 1) {
+        continue;
+      }
+      throw lastError;
+    } catch (err) {
+      lastError = err;
+      if (i < API_BASE_CANDIDATES.length - 1) continue;
+      throw err;
+    }
+  }
+
+  throw lastError || new Error('API request failed');
 }
 
 function getEntryRankByName(name, fallback = 3) {
@@ -691,7 +727,7 @@ function getEntryRankByName(name, fallback = 3) {
 async function api(action, params = {}) {
   switch ((action || '').toLowerCase()) {
     case 'members': {
-      const data = await fetchJson(`${API_BASE}/members`);
+      const data = await fetchJson('/members');
       return data.map(m => ({
         name: m.name,
         rank: m.default_rank,
@@ -701,7 +737,7 @@ async function api(action, params = {}) {
     case 'entries': {
       const week = parseInt(params.kw, 10);
       if (!Number.isFinite(week)) return [];
-      return fetchJson(`${API_BASE}/entries/${week}`);
+      return fetchJson(`/entries/${week}`);
     }
     case 'history':
       // Noch kein History-Endpunkt im Flask-Backend.
@@ -723,7 +759,7 @@ async function apiPost(data) {
     case 'save_wache':
     case 'save_wueste':
     case 'save_spezial': {
-      return fetchJson(`${API_BASE}/entries/${kw}`, {
+      return fetchJson(`/entries/${kw}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -734,7 +770,7 @@ async function apiPost(data) {
       });
     }
     case 'add_member': {
-      return fetchJson(`${API_BASE}/members`, {
+      return fetchJson('/members', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -747,7 +783,7 @@ async function apiPost(data) {
     case 'edit_member':
     case 'update_member': {
       const oldName = encodeURIComponent(data.oldName || '');
-      return fetchJson(`${API_BASE}/members/${oldName}`, {
+      return fetchJson(`/members/${oldName}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -759,7 +795,7 @@ async function apiPost(data) {
     }
     case 'delete_member': {
       const name = encodeURIComponent(data.name || '');
-      return fetchJson(`${API_BASE}/members/${name}`, { method: 'DELETE' });
+      return fetchJson(`/members/${name}`, { method: 'DELETE' });
     }
     case 'archive_week':
     case 'update_ergebnis':
@@ -1639,7 +1675,7 @@ window.syncData = syncData;
 
 // ── INIT ──
 async function initApp(){
-  if (!API_BASE) {
+  if (!API_BASE_CANDIDATES.length) {
     document.getElementById('login-screen').style.display = 'flex';
     document.getElementById('login-box').innerHTML = `
       <div style="font-family:'Rajdhani',sans-serif;font-size:20px;font-weight:700;margin-bottom:10px;">API nicht konfiguriert</div>
