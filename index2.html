@@ -1088,16 +1088,28 @@ async function kwChanged(){
     toast('Bitte JahrWoche im Format YYWW eingeben, z. B. 2616.');
     return;
   }
+  const prevKw = kw;
   kw = parsed;
   document.getElementById('kwInput').value = formatYearWeek(kw);
   try { await loadEntries(); } catch(e) {}
+  if (entries.length === 0 && !confirm(`KW ${formatYearWeek(kw)} hat noch keine Einträge.\nWoche anlegen und wechseln?`)) {
+    kw = prevKw;
+    document.getElementById('kwInput').value = formatYearWeek(kw);
+    try { await loadEntries(); } catch(e) {}
+  }
   renderAll();
 }
 
 async function changeYearWeek(delta) {
+  const prevKw = kw;
   kw = shiftYearWeek(kw, delta);
   document.getElementById('kwInput').value = formatYearWeek(kw);
   try { await loadEntries(); } catch(e) {}
+  if (entries.length === 0 && !confirm(`KW ${formatYearWeek(kw)} hat noch keine Einträge.\nWoche anlegen und wechseln?`)) {
+    kw = prevKw;
+    document.getElementById('kwInput').value = formatYearWeek(kw);
+    try { await loadEntries(); } catch(e) {}
+  }
   renderAll();
 }
 window.changeYearWeek = changeYearWeek;
@@ -1126,6 +1138,9 @@ async function showPage(id){
 function renderAll(){
   renderDashboard();
   if(document.getElementById('page-e').classList.contains('active')) renderList();
+  if(document.getElementById('page-w').classList.contains('active')) renderWache();
+  if(document.getElementById('page-wu').classList.contains('active')) renderWueste();
+  if(document.getElementById('page-se').classList.contains('active')) renderSpezial();
   if(document.getElementById('page-v').classList.contains('active')) renderVerwaltung();
 }
 
