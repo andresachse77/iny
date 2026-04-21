@@ -25,18 +25,7 @@
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body {
-  background-color: var(--bg);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1400 900'%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' transform='rotate(-24 700 450)' fill='%23ffffff' fill-opacity='0.045' font-family='Rajdhani, sans-serif' font-size='320' font-weight='700' letter-spacing='26'%3ETEST%3C/text%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: min(100vw, 1200px) auto;
-  background-attachment: fixed;
-  color: var(--text);
-  font-family: 'Inter', sans-serif;
-  font-size: 14px;
-  min-height: 100vh;
-}
+body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px; min-height: 100vh; }
 
 /* ── NAV ── */
 nav {
@@ -57,24 +46,6 @@ nav {
 .sync-btn.spinning { animation: spin 0.8s linear infinite; pointer-events: none; }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-.page-switch {
-  position: fixed;
-  top: 10px;
-  left: 10px;
-  z-index: 10050;
-  background: var(--card2);
-  border: 1px solid var(--line2);
-  border-radius: 8px;
-  padding: 6px 10px;
-  color: var(--text);
-  font-size: 12px;
-  font-weight: 600;
-  text-decoration: none;
-  font-family: 'Inter', sans-serif;
-  transition: all 0.15s;
-}
-.page-switch:hover { border-color: var(--gold); color: var(--gold); }
-
 /* ── LOGIN ── */
 #login-screen { position:fixed; inset:0; z-index:9999; background:var(--bg); display:flex; align-items:center; justify-content:center; flex-direction:column; }
 .login-box { text-align:center; padding:3rem 2.5rem; background:var(--card); border:1px solid var(--line2); border-radius:16px; max-width:380px; width:90%; }
@@ -92,21 +63,7 @@ nav {
 #logout-btn:hover { color:var(--red); border-color:var(--red); }
 .kw-wrap { display: flex; align-items: center; gap: 6px; background: var(--card2); border: 1px solid var(--line2); border-radius: 8px; padding: 5px 12px; }
 .kw-wrap label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--soft); }
-.kw-wrap input { background: none; border: none; color: var(--gold); font-family: 'Rajdhani', sans-serif; font-size: 20px; font-weight: 700; width: 58px; text-align: center; outline: none; }
-.kw-nav { display: flex; align-items: center; gap: 6px; }
-.kw-btn {
-  width: 28px;
-  height: 28px;
-  border-radius: 7px;
-  border: 1px solid var(--line2);
-  background: var(--card2);
-  color: var(--soft);
-  font-size: 16px;
-  line-height: 1;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-.kw-btn:hover { color: var(--gold); border-color: var(--gold); }
+.kw-wrap input { background: none; border: none; color: var(--gold); font-family: 'Rajdhani', sans-serif; font-size: 20px; font-weight: 700; width: 42px; text-align: center; outline: none; }
 
 /* ── PAGES ── */
 .page { display: none; padding: 1.25rem 1.5rem; max-width: 1400px; margin: 0 auto; }
@@ -347,8 +304,6 @@ nav {
 </head>
 <body>
 
-<a class="page-switch" href="./index.html">Zu index.html</a>
-
 <!-- ═══ LOGIN ═══ -->
 <div id="login-screen">
   <div class="login-box" id="login-box">
@@ -375,13 +330,9 @@ nav {
     <button class="tab" id="tab-v" onclick="showPage('v')">Verwaltung</button>
   </div>
   <button class="sync-btn" id="btn-sync" onclick="syncData()" title="Daten neu laden">🔄</button>
-  <div class="kw-nav">
-    <button class="kw-btn" type="button" onclick="changeYearWeek(-1)" title="Vorherige Woche">‹</button>
-    <div class="kw-wrap">
+  <div class="kw-wrap">
     <label>KW</label>
-      <input type="number" id="kwInput" min="1" max="9953" value="2616" onchange="kwChanged()">
-    </div>
-    <button class="kw-btn" type="button" onclick="changeYearWeek(1)" title="Nächste Woche">›</button>
+    <input type="number" id="kwInput" min="1" max="52" value="15" onchange="kwChanged()">
   </div>
 </nav>
 
@@ -589,43 +540,17 @@ nav {
 
 <script>
 // ══════════════════════════════════════════════════════
-//  INY RANKING – Backend API (Flask /api)
+//  INY RANKING – Google Sheets API (Apps Script Web-App)
 // ══════════════════════════════════════════════════════
 
 // ─── KONFIGURATION ───
-// Optional: localStorage.setItem('iny_api_base', 'https://dein-api-host/api')
-// Optional: ?api=https://dein-api-host/api (wird in localStorage gespeichert)
-const IS_GITHUB_PAGES = window.location.hostname.endsWith('github.io');
-const IS_NETLIFY = window.location.hostname.endsWith('.netlify.app');
-const IS_LOCAL_HOST = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-const apiFromQuery = new URLSearchParams(window.location.search).get('api');
-if (apiFromQuery) {
-  localStorage.setItem('iny_api_base', apiFromQuery.replace(/\/$/, ''));
-  const cleanUrl = `${window.location.origin}${window.location.pathname}${window.location.hash || ''}`;
-  history.replaceState(null, '', cleanUrl);
-}
-
-const API_BASE_OVERRIDE = (localStorage.getItem('iny_api_base') || '').replace(/\/$/, '');
-
-function buildApiBaseCandidates() {
-  if (API_BASE_OVERRIDE) return [API_BASE_OVERRIDE];
-  if (window.location.protocol === 'file:') return ['http://127.0.0.1:5000/api'];
-  if (IS_GITHUB_PAGES) return [];
-  if (IS_LOCAL_HOST) return [`${window.location.origin}/api`];
-
-  const fn = `${window.location.origin}/.netlify/functions/api`;
-  const classic = `${window.location.origin}/api`;
-  return IS_NETLIFY ? [fn, classic] : [fn, classic];
-}
-
-const API_BASE_CANDIDATES = buildApiBaseCandidates();
-let activeApiBaseIndex = 0;
+// Ersetze diese URL mit deiner Google Apps Script Web-App URL
+const API = 'https://script.google.com/macros/s/AKfycbwY5EchHiSyyXqvFAcu0eoD_8SBnR6rblN3PyyyruWC92jRxIWIu918H9gPlWqah1EE/exec';
 
 // ─── DISCORD OAuth2 ───
 const DISCORD_CLIENT_ID = '1494427568361967626';
 const DISCORD_REDIRECT = window.location.origin + window.location.pathname;
 const DISCORD_AUTH_URL = `https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&response_type=token&scope=identify&redirect_uri=${encodeURIComponent(DISCORD_REDIRECT)}`;
-const IS_LOCAL_PREVIEW = window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
 function discordLogin() {
   window.location.href = DISCORD_AUTH_URL;
@@ -683,126 +608,19 @@ async function checkDiscordAuth() {
   }
 }
 
-async function fetchJson(path, options = {}) {
-  if (!API_BASE_CANDIDATES.length) {
-    throw new Error('API nicht konfiguriert');
-  }
-
-  let lastError = null;
-
-  for (let i = activeApiBaseIndex; i < API_BASE_CANDIDATES.length; i += 1) {
-    const base = API_BASE_CANDIDATES[i];
-    const url = `${base}${path}`;
-
-    try {
-      const r = await fetch(url, options);
-      if (r.ok) {
-        activeApiBaseIndex = i;
-        return r.json();
-      }
-
-      const txt = await r.text();
-      lastError = new Error(`${r.status} ${r.statusText}${txt ? `: ${txt}` : ''}`);
-
-      if ((r.status === 404 || r.status === 502 || r.status === 503) && i < API_BASE_CANDIDATES.length - 1) {
-        continue;
-      }
-      throw lastError;
-    } catch (err) {
-      lastError = err;
-      if (i < API_BASE_CANDIDATES.length - 1) continue;
-      throw err;
-    }
-  }
-
-  throw lastError || new Error('API request failed');
-}
-
-function getEntryRankByName(name, fallback = 3) {
-  const e = entries.find(x => x.name === name);
-  if (e && e.rank != null) return e.rank;
-  return PREV[name] || fallback;
-}
-
 async function api(action, params = {}) {
-  switch ((action || '').toLowerCase()) {
-    case 'members': {
-      const data = await fetchJson('/members');
-      return data.map(m => ({
-        name: m.name,
-        rank: m.default_rank,
-        role: m.role
-      }));
-    }
-    case 'entries': {
-      const week = parseInt(params.kw, 10);
-      if (!Number.isFinite(week)) return [];
-      return fetchJson(`/entries/${week}`);
-    }
-    case 'history':
-      // Noch kein History-Endpunkt im Flask-Backend.
-      return [];
-    case 'weights':
-      return W;
-    case 'verify_discord':
-      // Zugriffskontrolle serverseitig optional; Frontend bleibt kompatibel.
-      return { ok: true };
-    default:
-      return { error: `Unknown action: ${action}` };
-  }
+  const url = `${API}?action=${action}&${new URLSearchParams(params)}`;
+  const r = await fetch(url);
+  return r.json();
 }
 
 async function apiPost(data) {
-  const action = (data?.action || '').toLowerCase();
-  switch (action) {
-    case 'save_entry':
-    case 'save_wache':
-    case 'save_wueste':
-    case 'save_spezial': {
-      return fetchJson(`/entries/${kw}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: data.name,
-          rank: data.rank != null ? data.rank : getEntryRankByName(data.name, 3),
-          flags: data.flags || {}
-        })
-      });
-    }
-    case 'add_member': {
-      return fetchJson('/members', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: data.name,
-          default_rank: data.rank,
-          role: data.role
-        })
-      });
-    }
-    case 'edit_member':
-    case 'update_member': {
-      const oldName = encodeURIComponent(data.oldName || '');
-      return fetchJson(`/members/${oldName}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: data.newName,
-          default_rank: data.rank,
-          role: data.role
-        })
-      });
-    }
-    case 'delete_member': {
-      const name = encodeURIComponent(data.name || '');
-      return fetchJson(`/members/${name}`, { method: 'DELETE' });
-    }
-    case 'archive_week':
-    case 'update_ergebnis':
-      return { ok: true };
-    default:
-      return { error: `Unknown action: ${action}` };
-  }
+  const r = await fetch(API, {
+    method: 'POST',
+    body: JSON.stringify(data),
+    headers: { 'Content-Type': 'text/plain' }  // text/plain vermeidet CORS preflight
+  });
+  return r.json();
 }
 
 // ─── Gewichtungen (identisch mit Excel Formeln-Sheet Zeile 103) ───
@@ -877,67 +695,8 @@ function isFixed(n){return R5.has(n)||R4.has(n);}
 function fixedRank(n){return R5.has(n)?5:R4.has(n)?4:null;}
 function rbClass(r){return 'rb'+r;}
 
-function getIsoYearWeekParts(date = new Date()) {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  const week = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-  return { year: d.getUTCFullYear(), week };
-}
-
-function isoWeeksInYear(year) {
-  return getIsoYearWeekParts(new Date(Date.UTC(year, 11, 28))).week;
-}
-
-function currentYearWeek() {
-  const { year, week } = getIsoYearWeekParts();
-  return (year % 100) * 100 + week;
-}
-
-function parseYearWeek(raw) {
-  const digits = String(raw || '').replace(/\D/g, '');
-  if (digits.length !== 4) return null;
-  const yy = parseInt(digits.slice(0, 2), 10);
-  const ww = parseInt(digits.slice(2, 4), 10);
-  const year = 2000 + yy;
-  if (ww < 1 || ww > isoWeeksInYear(year)) return null;
-  return yy * 100 + ww;
-}
-
-function formatYearWeek(yw) {
-  const yy = String(Math.floor(yw / 100)).padStart(2, '0');
-  const ww = String(yw % 100).padStart(2, '0');
-  return `${yy}${ww}`;
-}
-
-function shiftYearWeek(yw, delta) {
-  let year = 2000 + Math.floor(yw / 100);
-  let week = yw % 100;
-  let step = delta;
-
-  while (step !== 0) {
-    if (step > 0) {
-      week += 1;
-      if (week > isoWeeksInYear(year)) {
-        week = 1;
-        year += 1;
-      }
-      step -= 1;
-    } else {
-      week -= 1;
-      if (week < 1) {
-        year -= 1;
-        week = isoWeeksInYear(year);
-      }
-      step += 1;
-    }
-  }
-
-  return (year % 100) * 100 + week;
-}
-
 // ── STATE ──
-let kw=currentYearWeek(), entries=[], activeFilter='all', listFilter='all', search='', edName=null, edFlags={}, edRank=3;
+let kw=15, entries=[], activeFilter='all', listFilter='all', search='', edName=null, edFlags={}, edRank=3;
 let members = [];
 let historyData = [];
 
@@ -986,7 +745,7 @@ async function saveEntry(name, rank, flags) {
   await loadEntries();
 }
 
-document.getElementById('kwInput').value = formatYearWeek(kw);
+kw=parseInt(document.getElementById('kwInput').value);
 
 // ── RANK BUTTONS ──
 document.getElementById('rankRow').addEventListener('click',function(e){
@@ -1081,38 +840,7 @@ document.querySelectorAll('[data-lf]').forEach(b=>b.addEventListener('click',fun
 }));
 
 // ── KW ──
-async function kwChanged(){
-  const parsed = parseYearWeek(document.getElementById('kwInput').value);
-  if (parsed == null) {
-    document.getElementById('kwInput').value = formatYearWeek(kw);
-    toast('Bitte JahrWoche im Format YYWW eingeben, z. B. 2616.');
-    return;
-  }
-  const prevKw = kw;
-  kw = parsed;
-  document.getElementById('kwInput').value = formatYearWeek(kw);
-  try { await loadEntries(); } catch(e) {}
-  if (entries.length === 0 && !confirm(`KW ${formatYearWeek(kw)} hat noch keine Einträge.\nWoche anlegen und wechseln?`)) {
-    kw = prevKw;
-    document.getElementById('kwInput').value = formatYearWeek(kw);
-    try { await loadEntries(); } catch(e) {}
-  }
-  renderAll();
-}
-
-async function changeYearWeek(delta) {
-  const prevKw = kw;
-  kw = shiftYearWeek(kw, delta);
-  document.getElementById('kwInput').value = formatYearWeek(kw);
-  try { await loadEntries(); } catch(e) {}
-  if (entries.length === 0 && !confirm(`KW ${formatYearWeek(kw)} hat noch keine Einträge.\nWoche anlegen und wechseln?`)) {
-    kw = prevKw;
-    document.getElementById('kwInput').value = formatYearWeek(kw);
-    try { await loadEntries(); } catch(e) {}
-  }
-  renderAll();
-}
-window.changeYearWeek = changeYearWeek;
+async function kwChanged(){kw=parseInt(document.getElementById('kwInput').value);try{await loadEntries();}catch(e){} renderAll();}
 
 // ── NAV ──
 async function showPage(id){
@@ -1138,9 +866,6 @@ async function showPage(id){
 function renderAll(){
   renderDashboard();
   if(document.getElementById('page-e').classList.contains('active')) renderList();
-  if(document.getElementById('page-w').classList.contains('active')) renderWache();
-  if(document.getElementById('page-wu').classList.contains('active')) renderWueste();
-  if(document.getElementById('page-se').classList.contains('active')) renderSpezial();
   if(document.getElementById('page-v').classList.contains('active')) renderVerwaltung();
 }
 
@@ -1396,8 +1121,11 @@ async function wacheSet(name, type) {
     await apiPost({
       action: 'save_wache',
       name,
-      rank: e.rank,
-      flags: { ...e.flags }
+      flags: {
+        wache1: !!e.flags.wache1, wache1dmg: !!e.flags.wache1dmg,
+        wache2: !!e.flags.wache2, wache2dmg: !!e.flags.wache2dmg,
+        wache3: !!e.flags.wache3, wache3dmg: !!e.flags.wache3dmg
+      }
     });
   } catch(err) {
     toast('Fehler: ' + err.message);
@@ -1478,8 +1206,11 @@ async function wuesteSet(name, type) {
     await apiPost({
       action: 'save_wueste',
       name,
-      rank: e.rank,
-      flags: { ...e.flags }
+      flags: {
+        wuesteAnmeldung: !!e.flags.wuesteAnmeldung,
+        wuesteTeilnahme: !!e.flags.wuesteTeilnahme,
+        wuesteFehlen: !!e.flags.wuesteFehlen
+      }
     });
   } catch(err) {
     toast('Fehler: ' + err.message);
@@ -1567,8 +1298,11 @@ async function spezialSet(name, type) {
     await apiPost({
       action: 'save_spezial',
       name,
-      rank: e.rank,
-      flags: { ...e.flags }
+      flags: {
+        seTeilnahme: !!e.flags.seTeilnahme,
+        seTop50: !!e.flags.seTop50,
+        seTop20: !!e.flags.seTop20
+      }
     });
   } catch(err) {
     toast('Fehler: ' + err.message);
@@ -1690,32 +1424,15 @@ window.syncData = syncData;
 
 // ── INIT ──
 async function initApp(){
-  if (!API_BASE_CANDIDATES.length) {
+  // Discord Auth prüfen
+  const authed = await checkDiscordAuth();
+  if (!authed) {
     document.getElementById('login-screen').style.display = 'flex';
-    document.getElementById('login-box').innerHTML = `
-      <div style="font-family:'Rajdhani',sans-serif;font-size:20px;font-weight:700;margin-bottom:10px;">API nicht konfiguriert</div>
-      <div style="color:var(--soft);font-size:13px;line-height:1.5;max-width:560px;">
-        Diese Seite laeuft auf GitHub Pages (nur statisch). Bitte setze einmalig die API-URL in der Browser-Konsole:
-        <br><br>
-        localStorage.setItem('iny_api_base','https://DEIN-API-HOST/api'); location.reload();
-      </div>
-    `;
     return;
   }
-
-  if (!IS_LOCAL_PREVIEW) {
-    // Discord Auth nur online prüfen
-    const authed = await checkDiscordAuth();
-    if (!authed) {
-      document.getElementById('login-screen').style.display = 'flex';
-      return;
-    }
-
-    document.getElementById('logout-btn').style.display = 'block';
-  }
-
-  // Lokal (F5/file://localhost) ohne Discord-Login starten
+  // Login OK → App anzeigen
   document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('logout-btn').style.display = 'block';
   try {
     await loadMembers();
     await loadEntries();

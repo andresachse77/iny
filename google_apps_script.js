@@ -78,6 +78,7 @@ function doGet(e) {
       case 'results': result = getResults(); break;
       case 'history': result = getHistory(); break;
       case 'weights': result = W; break;
+      case 'r4_discord': result = getR4Discord(); break;
       case 'verify_discord': result = verifyDiscord(e.parameter.discord_id); break;
       default: result = { error: 'Unknown action: ' + action };
     }
@@ -422,6 +423,26 @@ function archiveWeek(data) {
 // ════════════════════════════════════════════════════
 //  DISCORD-ZUGRIFFSKONTROLLE
 // ════════════════════════════════════════════════════
+
+// Hole R4 mit Discord-IDs aus dem Zugriff-Sheet
+function getR4Discord() {
+  const members = getMembers();
+  const r4Names = new Set(members.filter(m => m.rank === 4 || m.role === 'r4').map(m => m.name));
+  
+  const ws = getSheet('Zugriff');
+  if (!ws) return [];
+  const lastRow = ws.getLastRow();
+  if (lastRow < 2) return [];
+  
+  const data = ws.getRange(2, 1, lastRow - 1, 2).getValues();
+  return data
+    .filter(r => r[0] && r[1])  // Discord-ID und Name vorhanden
+    .filter(r => r4Names.has(String(r[1]).trim()))  // Nur R4
+    .map(r => ({
+      discord_id: String(r[0]).trim(),
+      name: String(r[1]).trim()
+    }));
+}
 
 // Zugriff-Sheet: A=Discord-ID, B=Name
 function verifyDiscord(discordId) {
