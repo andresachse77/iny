@@ -767,24 +767,20 @@ async function checkDiscordAuth() {
     currentDiscordUser = user;
     localStorage.setItem('discord_user', JSON.stringify(user));
 
-    // Login-Daten in Backend-Cache schreiben, damit Avatar in Verwaltung sichtbar bleibt.
-    try {
-      await apiPost({
-        action: 'cache_discord_profile',
-        discordId: user.id,
-        discordUsername: user.username || user.global_name || null,
-        discordAvatar: user.avatar || null
-      });
-    } catch (cacheErr) {
-      // Best effort: fehlender Cache soll den Login nicht blockieren.
-    }
-
     // 3. Serverseitig pruefen, ob Discord-ID einem aktiven R4/R5 zugewiesen ist
     const verify = await api('verify_discord', { discord_id: user.id });
     if (!verify || !verify.ok) {
       renderAccessDenied(user, verify?.error || 'Kein Zugriff');
       return false;
     }
+
+    // Avatar/Profil-Cache asynchron nachziehen, ohne den Login zu verzoegern.
+    apiPost({
+      action: 'cache_discord_profile',
+      discordId: user.id,
+      discordUsername: user.username || user.global_name || null,
+      discordAvatar: user.avatar || null
+    }).catch(() => {});
 
     return true;
   } catch (e) {
