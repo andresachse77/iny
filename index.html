@@ -767,6 +767,18 @@ async function checkDiscordAuth() {
     currentDiscordUser = user;
     localStorage.setItem('discord_user', JSON.stringify(user));
 
+    // Login-Daten in Backend-Cache schreiben, damit Avatar in Verwaltung sichtbar bleibt.
+    try {
+      await apiPost({
+        action: 'cache_discord_profile',
+        discordId: user.id,
+        discordUsername: user.username || user.global_name || null,
+        discordAvatar: user.avatar || null
+      });
+    } catch (cacheErr) {
+      // Best effort: fehlender Cache soll den Login nicht blockieren.
+    }
+
     // 3. Serverseitig pruefen, ob Discord-ID einem aktiven R4/R5 zugewiesen ist
     const verify = await api('verify_discord', { discord_id: user.id });
     if (!verify || !verify.ok) {
@@ -934,6 +946,17 @@ async function apiPost(data) {
         body: JSON.stringify({ status: data.status || 'accepted' })
       });
     }
+    case 'cache_discord_profile': {
+      return fetchJson('/discord-profile-cache', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          discord_id: data.discordId,
+          discord_username: data.discordUsername,
+          discord_avatar: data.discordAvatar
+        })
+      });
+    }
     case 'archive_week':
     case 'update_ergebnis':
       return { ok: true };
@@ -1082,6 +1105,48 @@ let members = [];
 let memberMeta = {};
 let historyData = [];
 let accessRequests = [];
+let avatarCache = {};
+try {
+  avatarCache = JSON.parse(localStorage.getItem('iny_avatar_cache') || '{}') || {};
+} catch (err) {
+  avatarCache = {};
+}
+
+function getEffectiveAvatarUrl(meta) {
+  if (!meta) return null;
+  if (meta.discordAvatarUrl) return meta.discordAvatarUrl;
+  if (meta.discordId && avatarCache[meta.discordId]) return avatarCache[meta.discordId];
+  return null;
+}
+
+async function loadMemberDiscordAvatar(name) {
+  const meta = memberMeta[name] || {};
+  if (!meta.discordId) {
+    toast('Keine Discord-ID vorhanden.');
+    return;
+  }
+
+  const probeUrl = `https://unavatar.io/discord/${encodeURIComponent(meta.discordId)}?fallback=false&t=${Date.now()}`;
+  const ok = await new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(true);
+    img.onerror = () => resolve(false);
+    img.src = probeUrl;
+  });
+
+  if (!ok) {
+    toast('Kein Discord-Bild gefunden.');
+    return;
+  }
+
+  avatarCache[meta.discordId] = probeUrl;
+  localStorage.setItem('iny_avatar_cache', JSON.stringify(avatarCache));
+  meta.discordAvatarUrl = probeUrl;
+  memberMeta[name] = meta;
+  renderVerwaltung(document.getElementById('v-search').value.toLowerCase());
+  toast('Discord-Bild geladen.');
+}
+window.loadMemberDiscordAvatar = loadMemberDiscordAvatar;
 
 // ══════════════════════════════════════════════════════
 //  Daten laden/speichern via Google Apps Script API
@@ -1800,14 +1865,18 @@ function renderVerwaltung(filter=''){
     const role=R5.has(name)?5:R4.has(name)?4:(PREV[name]||3);
     const meta = memberMeta[name] || {};
     const esc = name.replace(/'/g,"\\'");
-    const avatar = meta.discordAvatarUrl
-      ? `<img class="v-avatar" src="${escHtml(meta.discordAvatarUrl)}" alt="Discord Avatar">`
+    const effectiveAvatar = getEffectiveAvatarUrl(meta);
+    const avatar = effectiveAvatar
+      ? `<img class="v-avatar" src="${escHtml(effectiveAvatar)}" alt="Discord Avatar">`
       : `<div class="v-avatar placeholder">DC</div>`;
     const discordState = meta.discordConnected
       ? `<span class="v-state ok">Discord verknuepft</span>`
       : `<span class="v-state warn">Discord-Verbindung fehlt</span>`;
     const swapButton = meta.discordConnected && meta.discordId && meta.id !== meta.discordId
       ? `<button class="v-btn swap" onclick="swapMemberIdToDiscord('${esc}')">ID = Discord-ID</button>`
+      : '';
+    const avatarLoadButton = meta.discordId
+      ? `<button class="v-btn map" onclick="loadMemberDiscordAvatar('${esc}')">DC Bild laden</button>`
       : '';
 
     if(editingMember===name){
@@ -1823,6 +1892,7 @@ function renderVerwaltung(filter=''){
         </div>
         ${discordState}
         ${swapButton}
+        ${avatarLoadButton}
         <input class="v-name-input" id="v-edit-input" value="${name.replace(/"/g,'&quot;')}" onkeydown="if(event.key==='Enter')saveMemberEdit('${esc}')">
         <input class="v-name-input v-discord-input" id="v-edit-discord" placeholder="Discord-ID oder leer" value="${(meta.discordId || '').replace(/"/g,'&quot;')}" onkeydown="if(event.key==='Enter')saveMemberEdit('${esc}')">
         <select class="v-rank-sel" id="v-edit-rank">
@@ -1848,6 +1918,7 @@ function renderVerwaltung(filter=''){
       </div>
       ${discordState}
       ${swapButton}
+      ${avatarLoadButton}
       <span class="rank-badge ${rbClass(role)}">R${role} · ${RL[role]||''}</span>
       <button class="v-btn edit" onclick="startEdit('${esc}')">✏ Bearbeiten</button>
       <button class="v-btn del" onclick="removeMember('${esc}')">🗑</button>

@@ -83,6 +83,49 @@ async function ensureAccessRequestsTable(con) {
   );
 }
 
+async function ensureDiscordProfileCacheTable(con) {
+  await con.execute(
+    `
+      CREATE TABLE IF NOT EXISTS discord_profile_cache (
+        alliance VARCHAR(50) NOT NULL,
+        discord_user_id VARCHAR(50) NOT NULL,
+        discord_username VARCHAR(100) NULL,
+        discord_avatar VARCHAR(255) NULL,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (alliance, discord_user_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `
+  );
+}
+
+async function cacheDiscordProfile(con, body) {
+  let discordId;
+  try {
+    discordId = normalizeDiscordId(body.discord_id);
+  } catch (err) {
+    return json(400, { error: err.message });
+  }
+  if (!discordId) return json(400, { error: 'Discord-ID fehlt' });
+
+  const discordUsername = String(body.discord_username || '').trim() || null;
+  const discordAvatar = String(body.discord_avatar || '').trim() || null;
+
+  await ensureDiscordProfileCacheTable(con);
+  await con.execute(
+    `
+      INSERT INTO discord_profile_cache (alliance, discord_user_id, discord_username, discord_avatar)
+      VALUES (?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE
+        discord_username = VALUES(discord_username),
+        discord_avatar = VALUES(discord_avatar),
+        updated_at = CURRENT_TIMESTAMP
+    `,
+    [ALLIANCE, discordId, discordUsername, discordAvatar]
+  );
+
+  return json(200, { ok: true });
+}
+
 async function verifyDiscord(con, discordIdRaw) {
   let discordId;
   try {
@@ -217,6 +260,7 @@ async function openDb() {
 }
 
 async function getMembers(con) {
+  await ensureDiscordProfileCacheTable(con);
   const [rows] = await con.execute(
     `
       SELECT
@@ -225,8 +269,8 @@ async function getMembers(con) {
         p.current_name,
         p.current_rank_code,
         COALESCE(pid.discord_user_id, puld.discord_user_id) AS discord_user_id,
-        puld.discord_username,
-        puld.discord_avatar
+        COALESCE(puld.discord_username, dpc.discord_username) AS discord_username,
+        COALESCE(puld.discord_avatar, dpc.discord_avatar) AS discord_avatar
       FROM players p
       LEFT JOIN (
         SELECT alliance, player_id, MIN(discord_user_id) AS discord_user_id
@@ -246,6 +290,9 @@ async function getMembers(con) {
           ON uda.alliance = pul.alliance AND uda.user_id = pul.user_id
         GROUP BY pul.alliance, pul.player_id
       ) puld ON puld.alliance = p.alliance AND puld.player_id = p.player_id
+      LEFT JOIN discord_profile_cache dpc
+        ON dpc.alliance = p.alliance
+       AND dpc.discord_user_id = COALESCE(pid.discord_user_id, puld.discord_user_id)
       WHERE p.alliance = ? AND p.is_active = 1
       ORDER BY p.current_name
     `,
@@ -733,6 +780,10 @@ exports.handler = async function handler(event) {
     if (event.httpMethod === 'GET' && route === '/verify-discord') {
       const discordId = (event.queryStringParameters || {}).discord_id;
       return await verifyDiscord(con, discordId);
+    }
+
+    if (event.httpMethod === 'POST' && route === '/discord-profile-cache') {
+      return await cacheDiscordProfile(con, body);
     }
 
     if (segments[0] === 'access-requests') {
