@@ -59,6 +59,14 @@ function applyProtectedRankRule(name, requestedRank) {
   };
 }
 
+function isOptionalRankLogError(err) {
+  return [
+    'ER_NO_SUCH_TABLE',
+    'ER_TABLEACCESS_DENIED_ERROR',
+    'ER_BAD_FIELD_ERROR'
+  ].includes(err?.code);
+}
+
 async function ensureRankChangeLogTable(con) {
   await con.execute(
     `
@@ -516,24 +524,55 @@ async function getMemberHistory(con, identity = {}, queryParams = {}) {
     });
   }
 
-  await ensureRankChangeLogTable(con);
-  const [changeRows] = await con.execute(
-    `
-      SELECT
-        old_rank_code,
-        requested_rank_code,
-        applied_rank_code,
-        source,
-        is_blocked,
-        reason,
-        created_at
-      FROM rank_change_log
-      WHERE alliance = ? AND player_id = ?
-      ORDER BY created_at DESC
-      LIMIT 25
-    `,
-    [ALLIANCE, member.player_id]
-  );
+  let changeRows = [];
+  try {
+    await ensureRankChangeLogTable(con);
+    const [rows] = await con.execute(
+      `
+        SELECT
+          old_rank_code,
+          requested_rank_code,
+          applied_rank_code,
+          source,
+          is_blocked,
+          reason,
+          created_at
+        FROM rank_change_log
+        WHERE alliance = ? AND player_id = ?
+        ORDER BY created_at DESC
+        LIMIT 25
+      `,
+      [ALLIANCE, member.player_id]
+    );
+    changeRows = rows;
+  } catch (err) {
+    if (!isOptionalRankLogError(err)) throw err;
+
+    if (err?.code === 'ER_BAD_FIELD_ERROR') {
+      try {
+        const [rowsByName] = await con.execute(
+          `
+            SELECT
+              old_rank_code,
+              requested_rank_code,
+              applied_rank_code,
+              source,
+              is_blocked,
+              reason,
+              created_at
+            FROM rank_change_log
+            WHERE alliance = ? AND LOWER(TRIM(player_name)) = LOWER(TRIM(?))
+            ORDER BY created_at DESC
+            LIMIT 25
+          `,
+          [ALLIANCE, member.current_name]
+        );
+        changeRows = rowsByName;
+      } catch (fallbackErr) {
+        if (!isOptionalRankLogError(fallbackErr)) throw fallbackErr;
+      }
+    }
+  }
 
   const rank = safeRank(member.current_rank_code);
   return json(200, {
