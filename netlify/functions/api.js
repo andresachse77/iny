@@ -205,8 +205,7 @@ async function listRankChangeLog(con, queryParams) {
 
 async function getDiscordMember(con, discordId, options = {}) {
   const leadershipOnly = !!options.leadershipOnly;
-  const [rows] = await con.execute(
-    `
+  const withCacheSql = `
       SELECT
         p.player_id,
         p.current_name,
@@ -222,7 +221,9 @@ async function getDiscordMember(con, discordId, options = {}) {
         GROUP BY alliance, player_id
       ) pid ON pid.alliance = p.alliance AND pid.player_id = p.player_id
       LEFT JOIN (
-        SELECT pul.alliance, pul.player_id, MIN(uda.discord_user_id) AS discord_user_id
+        SELECT pul.alliance, pul.player_id, MIN(uda.discord_user_id) AS discord_user_id,
+               MIN(uda.discord_username) AS discord_username,
+               MIN(uda.discord_avatar) AS discord_avatar
         FROM player_user_links pul
         JOIN user_discord_accounts uda
           ON uda.alliance = pul.alliance AND uda.user_id = pul.user_id
@@ -236,18 +237,54 @@ async function getDiscordMember(con, discordId, options = {}) {
         ${leadershipOnly ? 'AND p.current_rank_code IN (4, 5)' : ''}
         AND COALESCE(pid.discord_user_id, puld.discord_user_id) = ?
       LIMIT 1
-    `,
-    [ALLIANCE, discordId]
-  );
-  return rows[0] || null;
+    `;
+
+  const fallbackSql = `
+      SELECT
+        p.player_id,
+        p.current_name,
+        p.current_rank_code,
+        COALESCE(pid.discord_user_id, puld.discord_user_id) AS discord_user_id,
+        puld.discord_username AS discord_username,
+        puld.discord_avatar AS discord_avatar
+      FROM players p
+      LEFT JOIN (
+        SELECT alliance, player_id, MIN(discord_user_id) AS discord_user_id
+        FROM player_identities
+        WHERE discord_user_id IS NOT NULL
+        GROUP BY alliance, player_id
+      ) pid ON pid.alliance = p.alliance AND pid.player_id = p.player_id
+      LEFT JOIN (
+        SELECT pul.alliance, pul.player_id, MIN(uda.discord_user_id) AS discord_user_id,
+               MIN(uda.discord_username) AS discord_username,
+               MIN(uda.discord_avatar) AS discord_avatar
+        FROM player_user_links pul
+        JOIN user_discord_accounts uda
+          ON uda.alliance = pul.alliance AND uda.user_id = pul.user_id
+        GROUP BY pul.alliance, pul.player_id
+      ) puld ON puld.alliance = p.alliance AND puld.player_id = p.player_id
+      WHERE p.alliance = ?
+        AND p.is_active = 1
+        ${leadershipOnly ? 'AND p.current_rank_code IN (4, 5)' : ''}
+        AND COALESCE(pid.discord_user_id, puld.discord_user_id) = ?
+      LIMIT 1
+    `;
+
+  try {
+    const [rows] = await con.execute(withCacheSql, [ALLIANCE, discordId]);
+    return rows[0] || null;
+  } catch (err) {
+    if (!['ER_NO_SUCH_TABLE', 'ER_TABLEACCESS_DENIED_ERROR'].includes(err?.code)) throw err;
+    const [rows] = await con.execute(fallbackSql, [ALLIANCE, discordId]);
+    return rows[0] || null;
+  }
 }
 
 async function getMemberByName(con, nameRaw) {
   const memberName = String(nameRaw || '').trim();
   if (!memberName) return null;
 
-  const [rows] = await con.execute(
-    `
+  const withCacheSql = `
       SELECT
         p.player_id,
         p.current_name,
@@ -278,11 +315,46 @@ async function getMemberByName(con, nameRaw) {
         AND p.is_active = 1
         AND LOWER(TRIM(p.current_name)) = LOWER(TRIM(?))
       LIMIT 1
-    `,
-    [ALLIANCE, memberName]
-  );
+    `;
 
-  return rows[0] || null;
+  const fallbackSql = `
+      SELECT
+        p.player_id,
+        p.current_name,
+        p.current_rank_code,
+        COALESCE(pid.discord_user_id, puld.discord_user_id) AS discord_user_id,
+        puld.discord_username AS discord_username,
+        puld.discord_avatar AS discord_avatar
+      FROM players p
+      LEFT JOIN (
+        SELECT alliance, player_id, MIN(discord_user_id) AS discord_user_id
+        FROM player_identities
+        WHERE discord_user_id IS NOT NULL
+        GROUP BY alliance, player_id
+      ) pid ON pid.alliance = p.alliance AND pid.player_id = p.player_id
+      LEFT JOIN (
+        SELECT pul.alliance, pul.player_id, MIN(uda.discord_user_id) AS discord_user_id,
+               MIN(uda.discord_username) AS discord_username,
+               MIN(uda.discord_avatar) AS discord_avatar
+        FROM player_user_links pul
+        JOIN user_discord_accounts uda
+          ON uda.alliance = pul.alliance AND uda.user_id = pul.user_id
+        GROUP BY pul.alliance, pul.player_id
+      ) puld ON puld.alliance = p.alliance AND puld.player_id = p.player_id
+      WHERE p.alliance = ?
+        AND p.is_active = 1
+        AND LOWER(TRIM(p.current_name)) = LOWER(TRIM(?))
+      LIMIT 1
+    `;
+
+  try {
+    const [rows] = await con.execute(withCacheSql, [ALLIANCE, memberName]);
+    return rows[0] || null;
+  } catch (err) {
+    if (!['ER_NO_SUCH_TABLE', 'ER_TABLEACCESS_DENIED_ERROR'].includes(err?.code)) throw err;
+    const [rows] = await con.execute(fallbackSql, [ALLIANCE, memberName]);
+    return rows[0] || null;
+  }
 }
 
 async function ensureAccessRequestsTable(con) {
@@ -360,7 +432,6 @@ async function verifyDiscord(con, discordIdRaw) {
   }
   if (!discordId) return json(200, { ok: false, error: 'Discord-ID fehlt' });
 
-  await ensureDiscordProfileCacheTable(con);
   const member = await getDiscordMember(con, discordId);
   if (!member) return json(200, { ok: false, error: 'Kein Zugriff' });
 
@@ -398,7 +469,6 @@ async function getMemberHistory(con, identity = {}, queryParams = {}) {
     return json(400, { error: 'Discord-ID oder Name fehlt' });
   }
 
-  await ensureDiscordProfileCacheTable(con);
   const member = discordId ? await getDiscordMember(con, discordId) : await getMemberByName(con, memberName);
   if (!member) return json(404, { error: 'Mitglied nicht gefunden' });
 
