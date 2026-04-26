@@ -754,6 +754,7 @@ const AUTH_WAIT_MIN_MS = 700;
 const LOCAL_DEV_MEMBER_NAME = 'Lion Tooth';
 let currentDiscordUser = null;
 let authMember = null;
+let defaultLoginBoxMarkup = '';
 
 function getSiblingPageUrl(fileName) {
   const url = new URL(window.location.href);
@@ -821,6 +822,13 @@ function renderLoginPending(cachedState) {
       <span>Prüfe gerade ${escHtml(memberName)}. Wenn dein Discord-Login noch gültig ist, geht es automatisch weiter.</span>
     </div>
   `;
+}
+
+function restoreLoginBoxMarkup() {
+  const loginBox = document.getElementById('login-box');
+  if (!loginBox) return;
+  if (!defaultLoginBoxMarkup) defaultLoginBoxMarkup = loginBox.innerHTML;
+  loginBox.innerHTML = defaultLoginBoxMarkup;
 }
 
 function buildLocalAuthState(name) {
@@ -938,6 +946,7 @@ async function checkDiscordAuth() {
   const token = localStorage.getItem('discord_token');
   if (!token) {
     clearAuthState();
+    restoreLoginBoxMarkup();
     return false;
   }
 
@@ -949,6 +958,7 @@ async function checkDiscordAuth() {
     if (!res.ok) {
       localStorage.removeItem('discord_token');
       clearAuthState();
+      restoreLoginBoxMarkup();
       return false;
     }
     const user = await res.json();
@@ -994,6 +1004,7 @@ async function checkDiscordAuth() {
   } catch (e) {
     localStorage.removeItem('discord_token');
     clearAuthState();
+    restoreLoginBoxMarkup();
     return false;
   }
 }
@@ -2329,6 +2340,11 @@ window.syncData = syncData;
 
 // ── INIT ──
 async function initApp(){
+  const loginBox = document.getElementById('login-box');
+  if (loginBox && !defaultLoginBoxMarkup) {
+    defaultLoginBoxMarkup = loginBox.innerHTML;
+  }
+
   authMember = readAuthState();
   updateMeButton();
 

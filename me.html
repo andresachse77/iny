@@ -618,6 +618,7 @@ let authMember = null;
 let historyBundle = null;
 let selectedWeekIndex = 0;
 let activeMemberName = '';
+let defaultLoginBoxMarkup = '';
 
 const RC = {1:'#f0a500',2:'#2ecb7a',3:'#4a9eff',4:'#e05545',5:'#9b6dff'};
 const RL = {1:'Rookie',2:'Pro',3:'Elite',4:'Leader',5:'Chef'};
@@ -713,6 +714,13 @@ function renderLoginPending() {
     <div class="login-spinner"></div>
     <p>Bekannte Anmeldung gefunden. Prüfe gerade ${escHtml(title)} und lade deinen Bereich automatisch.</p>
   `;
+}
+
+function restoreLoginBoxMarkup() {
+  const loginBox = document.getElementById('login-box');
+  if (!loginBox) return;
+  if (!defaultLoginBoxMarkup) defaultLoginBoxMarkup = loginBox.innerHTML;
+  loginBox.innerHTML = defaultLoginBoxMarkup;
 }
 
 async function fetchJson(path, options = {}) {
@@ -1001,6 +1009,7 @@ async function checkDiscordAuth() {
   const token = localStorage.getItem('discord_token');
   if (!token) {
     clearAuthState();
+    restoreLoginBoxMarkup();
     return false;
   }
 
@@ -1011,6 +1020,7 @@ async function checkDiscordAuth() {
     if (!response.ok) {
       localStorage.removeItem('discord_token');
       clearAuthState();
+      restoreLoginBoxMarkup();
       return false;
     }
 
@@ -1049,6 +1059,7 @@ async function checkDiscordAuth() {
   } catch (error) {
     localStorage.removeItem('discord_token');
     clearAuthState();
+    restoreLoginBoxMarkup();
     toast(`Login-Fehler: ${error.message}`);
     return false;
   }
@@ -1062,6 +1073,11 @@ async function loadMemberHistory({ discordId = '', name = '' } = {}) {
 }
 
 async function init() {
+  const loginBox = document.getElementById('login-box');
+  if (loginBox && !defaultLoginBoxMarkup) {
+    defaultLoginBoxMarkup = loginBox.innerHTML;
+  }
+
   authMember = readAuthState();
   if (!API_BASE_CANDIDATES.length) {
     document.getElementById('login-box').innerHTML = `
