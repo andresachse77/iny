@@ -15,3 +15,6 @@ SETUP.txt
 
 # Auth tokens
 .graph_tokens.json
+
+# Lokale Python-Skripte (nicht deployen)
+py/
