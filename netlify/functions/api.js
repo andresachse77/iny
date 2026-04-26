@@ -2,6 +2,7 @@ const mysql = require('mysql2/promise');
 const { randomUUID } = require('crypto');
 
 const ALLIANCE = process.env.INY_ALLIANCE || 'INY';
+const PROTECTED_R4_NAMES = parseProtectedR4Names(process.env.INY_PROTECTED_R4_NAMES || 'Lion Tooth');
 
 function json(statusCode, payload) {
   return {
@@ -26,6 +27,130 @@ function normalizeDiscordId(value) {
   if (!discordId) return ''
   if (!/^\d+$/.test(discordId)) throw new Error('Discord-ID muss numerisch sein')
   return discordId
+}
+
+function normalizeMemberName(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function parseProtectedR4Names(value) {
+  return new Set(
+    String(value || '')
+      .split(',')
+      .map((v) => normalizeMemberName(v))
+      .filter(Boolean)
+  );
+}
+
+function isProtectedR4Member(name) {
+  return PROTECTED_R4_NAMES.has(normalizeMemberName(name));
+}
+
+function applyProtectedRankRule(name, requestedRank) {
+  const protectedMember = isProtectedR4Member(name);
+  if (!protectedMember) {
+    return { effectiveRank: requestedRank, protectedMember: false, blocked: false };
+  }
+
+  return {
+    effectiveRank: 4,
+    protectedMember: true,
+    blocked: requestedRank !== 4
+  };
+}
+
+async function ensureRankChangeLogTable(con) {
+  await con.execute(
+    `
+      CREATE TABLE IF NOT EXISTS rank_change_log (
+        alliance VARCHAR(50) NOT NULL,
+        log_id CHAR(36) NOT NULL,
+        player_id CHAR(36) NULL,
+        player_name VARCHAR(150) NOT NULL,
+        old_rank_code INT NULL,
+        requested_rank_code INT NULL,
+        applied_rank_code INT NOT NULL,
+        source VARCHAR(60) NOT NULL,
+        is_blocked TINYINT(1) NOT NULL DEFAULT 0,
+        reason VARCHAR(255) NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (alliance, log_id),
+        KEY ix_rank_change_log_player (alliance, player_name, created_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `
+  );
+}
+
+async function logRankChange(con, payload) {
+  await ensureRankChangeLogTable(con);
+  await con.execute(
+    `
+      INSERT INTO rank_change_log (
+        alliance,
+        log_id,
+        player_id,
+        player_name,
+        old_rank_code,
+        requested_rank_code,
+        applied_rank_code,
+        source,
+        is_blocked,
+        reason
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `,
+    [
+      ALLIANCE,
+      randomUUID(),
+      payload.playerId || null,
+      payload.playerName,
+      Number.isFinite(payload.oldRank) ? payload.oldRank : null,
+      Number.isFinite(payload.requestedRank) ? payload.requestedRank : null,
+      payload.appliedRank,
+      payload.source,
+      payload.blocked ? 1 : 0,
+      payload.reason || null
+    ]
+  );
+}
+
+async function enforceProtectedRanks(con) {
+  if (!PROTECTED_R4_NAMES.size) return;
+
+  const names = Array.from(PROTECTED_R4_NAMES);
+  const placeholders = names.map(() => '?').join(',');
+  const [rows] = await con.execute(
+    `
+      SELECT player_id, current_name, current_rank_code
+      FROM players
+      WHERE alliance = ?
+        AND LOWER(TRIM(current_name)) IN (${placeholders})
+        AND current_rank_code <> 4
+    `,
+    [ALLIANCE, ...names]
+  );
+
+  for (const row of rows) {
+    await con.execute(
+      `
+        UPDATE players
+        SET current_rank_code = 4, is_active = 1, retired_at = NULL
+        WHERE alliance = ? AND player_id = ?
+      `,
+      [ALLIANCE, row.player_id]
+    );
+
+    await logRankChange(con, {
+      playerId: row.player_id,
+      playerName: row.current_name,
+      oldRank: Number.parseInt(row.current_rank_code, 10),
+      requestedRank: 4,
+      appliedRank: 4,
+      source: 'system:protected-r4-enforce',
+      blocked: true,
+      reason: 'protected-r4-member-auto-fix'
+    });
+  }
 }
 
 async function getDiscordAccessMember(con, discordId) {
@@ -432,7 +557,8 @@ async function addMember(con, body) {
   const name = (body.name || '').trim();
   if (!name) return json(400, { error: 'Name fehlt' });
 
-  const rank = safeRank(body.default_rank ?? body.rank ?? 3);
+  const requestedRank = safeRank(body.default_rank ?? body.rank ?? 3);
+  const { effectiveRank: rank, blocked } = applyProtectedRankRule(name, requestedRank);
   const playerId = randomUUID();
   const nameEventId = randomUUID();
 
@@ -445,6 +571,19 @@ async function addMember(con, body) {
       `,
       [ALLIANCE, playerId, name, rank]
     );
+
+    if (requestedRank !== rank || isProtectedR4Member(name)) {
+      await logRankChange(con, {
+        playerId,
+        playerName: name,
+        oldRank: null,
+        requestedRank,
+        appliedRank: rank,
+        source: 'members:add',
+        blocked,
+        reason: blocked ? 'protected-r4-member' : 'protected-r4-enforced'
+      });
+    }
 
     await con.execute(
       `
@@ -469,7 +608,7 @@ async function updateMember(con, oldName, body) {
   const newName = (body.name || oldName || '').trim();
   if (!newName) return json(400, { error: 'Name fehlt' });
 
-  const rank = safeRank(body.default_rank ?? body.rank ?? 3);
+  const requestedRank = safeRank(body.default_rank ?? body.rank ?? 3);
   let discordId;
   try {
     discordId = Object.prototype.hasOwnProperty.call(body, 'discord_id') ? normalizeDiscordId(body.discord_id) : undefined;
@@ -479,7 +618,7 @@ async function updateMember(con, oldName, body) {
 
   const [rows] = await con.execute(
     `
-      SELECT player_id, current_name
+      SELECT player_id, current_name, current_rank_code
       FROM players
       WHERE alliance = ? AND current_name = ?
     `,
@@ -488,6 +627,13 @@ async function updateMember(con, oldName, body) {
 
   if (!rows.length) return json(404, { error: 'Mitglied nicht gefunden' });
   const playerId = rows[0].player_id;
+  const oldRank = Number.parseInt(rows[0].current_rank_code, 10);
+  const baseNameForProtection = rows[0].current_name || decodeURIComponent(oldName);
+  const protectedEvaluation = applyProtectedRankRule(baseNameForProtection, requestedRank);
+  const renameProtectedEvaluation = applyProtectedRankRule(newName, requestedRank);
+  const protectedMember = protectedEvaluation.protectedMember || renameProtectedEvaluation.protectedMember;
+  const rank = protectedMember ? 4 : requestedRank;
+  const blocked = protectedMember && requestedRank !== 4;
 
   try {
     await con.beginTransaction();
@@ -500,6 +646,19 @@ async function updateMember(con, oldName, body) {
       `,
       [newName, rank, ALLIANCE, playerId]
     );
+
+    if (oldRank !== rank || blocked || protectedMember) {
+      await logRankChange(con, {
+        playerId,
+        playerName: newName,
+        oldRank,
+        requestedRank,
+        appliedRank: rank,
+        source: 'members:update',
+        blocked,
+        reason: protectedMember ? 'protected-r4-member' : null
+      });
+    }
 
       if (newName !== rows[0].current_name) {
         await con.execute(
@@ -608,7 +767,9 @@ async function saveEntry(con, kw, body) {
   const name = (body.name || '').trim();
   if (!name) return json(400, { error: 'Name fehlt' });
 
-  const rank = safeRank(body.rank ?? 3);
+  const requestedRank = safeRank(body.rank ?? 3);
+  const directProtection = applyProtectedRankRule(name, requestedRank);
+  let rank = directProtection.effectiveRank;
   const flags = body.flags || {};
 
   await con.beginTransaction();
@@ -624,7 +785,7 @@ async function saveEntry(con, kw, body) {
 
     const [playerRows] = await con.execute(
       `
-        SELECT player_id
+        SELECT player_id, current_name, current_rank_code
         FROM players
         WHERE alliance = ? AND current_name = ?
       `,
@@ -634,6 +795,10 @@ async function saveEntry(con, kw, body) {
     let playerId;
     if (playerRows.length) {
       playerId = playerRows[0].player_id;
+      const oldRank = Number.parseInt(playerRows[0].current_rank_code, 10);
+      const protection = applyProtectedRankRule(playerRows[0].current_name || name, requestedRank);
+      rank = protection.effectiveRank;
+
       await con.execute(
         `
           UPDATE players
@@ -642,8 +807,24 @@ async function saveEntry(con, kw, body) {
         `,
         [rank, ALLIANCE, playerId]
       );
+
+      if (oldRank !== rank || protection.blocked || protection.protectedMember) {
+        await logRankChange(con, {
+          playerId,
+          playerName: playerRows[0].current_name || name,
+          oldRank,
+          requestedRank,
+          appliedRank: rank,
+          source: `entries:${kw}`,
+          blocked: protection.blocked,
+          reason: protection.protectedMember ? 'protected-r4-member' : null
+        });
+      }
     } else {
       playerId = randomUUID();
+      const protection = applyProtectedRankRule(name, requestedRank);
+      rank = protection.effectiveRank;
+
       await con.execute(
         `
           INSERT INTO players (alliance, player_id, current_name, current_rank_code, is_active)
@@ -651,6 +832,19 @@ async function saveEntry(con, kw, body) {
         `,
         [ALLIANCE, playerId, name, rank]
       );
+
+      if (protection.protectedMember) {
+        await logRankChange(con, {
+          playerId,
+          playerName: name,
+          oldRank: null,
+          requestedRank,
+          appliedRank: rank,
+          source: `entries:${kw}`,
+          blocked: protection.blocked,
+          reason: 'protected-r4-member'
+        });
+      }
       await con.execute(
         `
           INSERT INTO player_name_history (alliance, name_event_id, player_id, player_name, valid_from_yw)
@@ -764,6 +958,7 @@ exports.handler = async function handler(event) {
   let con;
   try {
     con = await openDb();
+    await enforceProtectedRanks(con);
 
     if (event.httpMethod === 'GET' && route === '/health') {
       const [rows] = await con.execute('SELECT 1 AS ok');
