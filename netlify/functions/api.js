@@ -153,6 +153,56 @@ async function enforceProtectedRanks(con) {
   }
 }
 
+async function listRankChangeLog(con, queryParams) {
+  await ensureRankChangeLogTable(con);
+
+  const rawLimit = Number.parseInt((queryParams || {}).limit, 10);
+  const limit = Number.isFinite(rawLimit) ? Math.max(1, Math.min(200, rawLimit)) : 100;
+  const nameFilter = String((queryParams || {}).name || '').trim();
+
+  if (nameFilter) {
+    const [rows] = await con.execute(
+      `
+        SELECT
+          player_name,
+          old_rank_code,
+          requested_rank_code,
+          applied_rank_code,
+          source,
+          is_blocked,
+          reason,
+          created_at
+        FROM rank_change_log
+        WHERE alliance = ? AND LOWER(TRIM(player_name)) = LOWER(TRIM(?))
+        ORDER BY created_at DESC
+        LIMIT ?
+      `,
+      [ALLIANCE, nameFilter, limit]
+    );
+    return json(200, rows);
+  }
+
+  const [rows] = await con.execute(
+    `
+      SELECT
+        player_name,
+        old_rank_code,
+        requested_rank_code,
+        applied_rank_code,
+        source,
+        is_blocked,
+        reason,
+        created_at
+      FROM rank_change_log
+      WHERE alliance = ?
+      ORDER BY created_at DESC
+      LIMIT ?
+    `,
+    [ALLIANCE, limit]
+  );
+  return json(200, rows);
+}
+
 async function getDiscordAccessMember(con, discordId) {
   const [rows] = await con.execute(
     `
@@ -979,6 +1029,10 @@ exports.handler = async function handler(event) {
 
     if (event.httpMethod === 'POST' && route === '/discord-profile-cache') {
       return await cacheDiscordProfile(con, body);
+    }
+
+    if (event.httpMethod === 'GET' && route === '/rank-change-log') {
+      return await listRankChangeLog(con, event.queryStringParameters || {});
     }
 
     if (segments[0] === 'access-requests') {
