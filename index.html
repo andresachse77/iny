@@ -183,7 +183,6 @@ nav {
 .prog-top { display: flex; justify-content: space-between; font-size: 12px; color: var(--soft); margin-bottom: 5px; }
 .prog-bar { height: 5px; background: var(--card2); border-radius: 99px; overflow: hidden; }
 .prog-fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold2)); border-radius: 99px; transition: width 0.4s; }
-
 /* ── PANELS ── */
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
 .panel { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.1rem; }
@@ -1316,11 +1315,16 @@ function shiftYearWeek(yw, delta) {
 }
 
 // ── STATE ──
+const ENTRIES_CACHE_PREFIX = 'iny_entries_cache_v1_';
+const ENTRIES_REFRESH_MS = 60 * 60 * 1000;
+
 let kw=currentYearWeek(), entries=[], activeFilter='all', listFilter='all', search='', edName=null, edFlags={}, edRank=3;
 let members = [];
 let memberMeta = {};
 let historyData = [];
 let accessRequests = [];
+let entriesLoading = false;
+let entriesLoadedAt = 0;
 let avatarCache = {};
 try {
   avatarCache = JSON.parse(localStorage.getItem('iny_avatar_cache') || '{}') || {};
@@ -1333,6 +1337,49 @@ function getEffectiveAvatarUrl(meta) {
   if (meta.discordAvatarUrl) return meta.discordAvatarUrl;
   if (meta.discordId && avatarCache[meta.discordId]) return avatarCache[meta.discordId];
   return null;
+}
+
+function getEntriesCacheKey(yearWeek) {
+  return `${ENTRIES_CACHE_PREFIX}${yearWeek}`;
+}
+
+function readEntriesCache(yearWeek) {
+  try {
+    const raw = localStorage.getItem(getEntriesCacheKey(yearWeek));
+    const parsed = raw ? JSON.parse(raw) : null;
+    if (!parsed || !Array.isArray(parsed.data) || !Number.isFinite(parsed.savedAt)) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeEntriesCache(yearWeek, data) {
+  try {
+    localStorage.setItem(getEntriesCacheKey(yearWeek), JSON.stringify({
+      savedAt: Date.now(),
+      data: Array.isArray(data) ? data : []
+    }));
+  } catch {}
+}
+
+function applyEntriesData(data) {
+  entries = [];
+  if (!data || data.error) return;
+  data.forEach(e => {
+    const flags = e.flags || {};
+    const pts = e.points != null ? e.points : calcPoints(flags);
+    const baseRank = e.rank || PREV[e.name] || 3;
+    const nr = e.newRank != null ? e.newRank : calcRanking(pts, baseRank);
+    entries.push({
+      name: e.name,
+      rank: nr,
+      baseRank: baseRank,
+      flags: flags,
+      points: pts,
+      afk: e.afk || !!flags.afk
+    });
+  });
 }
 
 async function loadMemberDiscordAvatar(name) {
@@ -1390,22 +1437,40 @@ async function loadMembers() {
 
 async function loadEntries() {
   const data = await api('entries', { kw });
-  entries = [];
-  if (!data || data.error) return;
-  data.forEach(e => {
-    const flags = e.flags || {};
-    const pts = e.points != null ? e.points : calcPoints(flags);
-    const baseRank = e.rank || PREV[e.name] || 3;
-    const nr = e.newRank != null ? e.newRank : calcRanking(pts, baseRank);
-    entries.push({
-      name: e.name,
-      rank: nr,
-      baseRank: baseRank,
-      flags: flags,
-      points: pts,
-      afk: e.afk || !!flags.afk
-    });
-  });
+  applyEntriesData(data);
+  entriesLoadedAt = Date.now();
+  writeEntriesCache(kw, data || []);
+}
+
+function hydrateEntriesFromCache(yearWeek, { allowStale = false } = {}) {
+  const cached = readEntriesCache(yearWeek);
+  if (!cached) return false;
+  const isFresh = (Date.now() - cached.savedAt) < ENTRIES_REFRESH_MS;
+  if (!allowStale && !isFresh) return false;
+  applyEntriesData(cached.data);
+  entriesLoadedAt = cached.savedAt;
+  return true;
+}
+
+function entriesNeedRefresh() {
+  return !entriesLoadedAt || (Date.now() - entriesLoadedAt) >= ENTRIES_REFRESH_MS;
+}
+
+async function refreshEntriesIfNeeded({ force = false, background = false } = {}) {
+  if (!force && !entriesNeedRefresh()) return;
+  if (entriesLoading) return;
+
+  entriesLoading = true;
+  renderAll();
+  try {
+    await loadEntries();
+    renderAll();
+  } catch (err) {
+    toast('Fehler beim Laden der Wocheneinträge: ' + err.message);
+  } finally {
+    entriesLoading = false;
+    if (!background) renderAll();
+  }
 }
 
 async function loadAccessRequests() {
@@ -1562,12 +1627,11 @@ async function showPage(id){
   document.getElementById('tab-e').classList.toggle('active',id==='e');
   document.getElementById('tab-w').classList.toggle('active',id==='w');
   document.getElementById('tab-v').classList.toggle('active',id==='v');
-  // Bei Tab-Wechsel: Daten neu laden
-  await loadEntries();
   if(id==='d') renderDashboard();
   if(id==='e') renderList();
   if(id==='w') selectEventView(activeEventView);
   if(id==='v') renderVerwaltung();
+  if (id !== 'v') refreshEntriesIfNeeded({ background: true });
 }
 
 // ── RENDER ALL ──
@@ -1619,6 +1683,23 @@ function renderList(){
 
 // ── DASHBOARD ──
 function renderDashboard(){
+  if(entriesLoading && entries.length===0){
+    document.getElementById('s-count').textContent='...';
+    document.getElementById('prog-fill').style.width='0%';
+    document.getElementById('prog-pct').textContent='laedt';
+    document.getElementById('kw-d').textContent=kw;
+    document.getElementById('s-warn').textContent='...';
+    document.getElementById('s-up').textContent='...';
+    document.getElementById('s-down').textContent='...';
+    document.getElementById('warn-ct').textContent='laedt';
+    document.getElementById('warn-list').innerHTML='<div class="empty" style="padding:0.5rem 0;">Warnliste laedt ...</div>';
+    document.getElementById('top-list').innerHTML='<div class="empty" style="padding:0.5rem 0;">Top Performer werden geladen ...</div>';
+    document.getElementById('field-bars').innerHTML='<div class="empty" style="padding:0.5rem 0;">Diagramme werden im Hintergrund aktualisiert ...</div>';
+    document.getElementById('rdist').innerHTML='';
+    renderTable();
+    return;
+  }
+
   const n=entries.length, pct=Math.round(n/members.length*100);
   document.getElementById('s-count').textContent=n;
   document.getElementById('prog-fill').style.width=pct+'%';
@@ -2103,7 +2184,7 @@ function renderVerwaltung(filter=''){
         <div class="v-member">
           ${avatar}
           <div style="flex:1;min-width:0;">
-            <div class="v-name">${escHtml(name)}</div>
+            <div class="v-name"><button class="member-jump" type="button" onclick="event.stopPropagation();openMemberMe('${esc}')">${escHtml(name)}</button></div>
             <div class="v-meta">Allianz: ${escHtml(meta.alliance || 'INY')}</div>
             <div class="v-meta">Spieler-ID: ${escHtml(meta.id || 'unbekannt')}</div>
             <div class="v-meta">Discord-ID: ${escHtml(meta.discordId || 'nicht verbunden')}</div>
@@ -2130,7 +2211,7 @@ function renderVerwaltung(filter=''){
       <div class="v-member">
         ${avatar}
         <div style="flex:1;min-width:0;">
-          <div class="v-name">${escHtml(name)}</div>
+          <div class="v-name"><button class="member-jump" type="button" onclick="event.stopPropagation();openMemberMe('${esc}')">${escHtml(name)}</button></div>
           <div class="v-meta">Allianz: ${escHtml(meta.alliance || 'INY')} | Spieler-ID: ${escHtml(meta.id || 'unbekannt')}</div>
           <div class="v-meta">Discord-ID: ${escHtml(meta.discordId || 'nicht verbunden')} ${meta.discordUsername ? `(${escHtml(meta.discordUsername)})` : ''}</div>
         </div>
@@ -2388,9 +2469,15 @@ async function initApp(){
   try {
     await loadMembers();
     const localAuth = ensureLocalPreviewAuth();
-    await loadEntries();
-    await loadAccessRequests();
     renderAll();
+    hydrateEntriesFromCache(kw, { allowStale: true });
+    renderAll();
+    refreshEntriesIfNeeded({ force: !entries.length, background: true });
+    loadAccessRequests().then(() => {
+      if(document.getElementById('page-v').classList.contains('active')) {
+        renderVerwaltung(document.getElementById('v-search').value.toLowerCase());
+      }
+    });
     if (localAuth && !localAuth.can_manage) {
       window.location.replace(getSiblingPageUrl('me.html'));
       return;
