@@ -191,9 +191,9 @@ async function listRankChangeLog(con, queryParams) {
         FROM rank_change_log
         WHERE alliance = ? AND LOWER(TRIM(player_name)) = LOWER(TRIM(?))
         ORDER BY created_at DESC
-        LIMIT ?
+        LIMIT ${limit}
       `,
-      [ALLIANCE, nameFilter, limit]
+      [ALLIANCE, nameFilter]
     );
     return json(200, rows);
   }
@@ -212,9 +212,9 @@ async function listRankChangeLog(con, queryParams) {
       FROM rank_change_log
       WHERE alliance = ?
       ORDER BY created_at DESC
-      LIMIT ?
+      LIMIT ${limit}
     `,
-    [ALLIANCE, limit]
+    [ALLIANCE]
   );
   return json(200, rows);
 }
@@ -505,9 +505,9 @@ async function getMemberHistory(con, identity = {}, queryParams = {}) {
         FROM weekly_entries
         WHERE alliance = ? AND player_id = ?
         ORDER BY year_week DESC
-        LIMIT ?
+        LIMIT ${limit}
       `,
-      [ALLIANCE, member.player_id, limit]
+      [ALLIANCE, member.player_id]
     );
     entryRows = rows;
   } catch (err) {
@@ -525,9 +525,9 @@ async function getMemberHistory(con, identity = {}, queryParams = {}) {
             FROM weekly_entries
             WHERE alliance = ? AND player_id = ?
             ORDER BY year_week DESC
-            LIMIT ?
+            LIMIT ${limit}
           `,
-          [ALLIANCE, member.player_id, limit]
+          [ALLIANCE, member.player_id]
         );
         entryRows = rowsLegacy.map((row) => ({
           ...row,
