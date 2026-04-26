@@ -203,13 +203,17 @@ async function listRankChangeLog(con, queryParams) {
   return json(200, rows);
 }
 
-async function getDiscordAccessMember(con, discordId) {
+async function getDiscordMember(con, discordId, options = {}) {
+  const leadershipOnly = !!options.leadershipOnly;
   const [rows] = await con.execute(
     `
       SELECT
+        p.player_id,
         p.current_name,
         p.current_rank_code,
-        COALESCE(pid.discord_user_id, puld.discord_user_id) AS discord_user_id
+        COALESCE(pid.discord_user_id, puld.discord_user_id) AS discord_user_id,
+        COALESCE(puld.discord_username, dpc.discord_username) AS discord_username,
+        COALESCE(puld.discord_avatar, dpc.discord_avatar) AS discord_avatar
       FROM players p
       LEFT JOIN (
         SELECT alliance, player_id, MIN(discord_user_id) AS discord_user_id
@@ -224,14 +228,60 @@ async function getDiscordAccessMember(con, discordId) {
           ON uda.alliance = pul.alliance AND uda.user_id = pul.user_id
         GROUP BY pul.alliance, pul.player_id
       ) puld ON puld.alliance = p.alliance AND puld.player_id = p.player_id
+      LEFT JOIN discord_profile_cache dpc
+        ON dpc.alliance = p.alliance
+       AND dpc.discord_user_id = COALESCE(pid.discord_user_id, puld.discord_user_id)
       WHERE p.alliance = ?
         AND p.is_active = 1
-        AND p.current_rank_code IN (4, 5)
+        ${leadershipOnly ? 'AND p.current_rank_code IN (4, 5)' : ''}
         AND COALESCE(pid.discord_user_id, puld.discord_user_id) = ?
       LIMIT 1
     `,
     [ALLIANCE, discordId]
   );
+  return rows[0] || null;
+}
+
+async function getMemberByName(con, nameRaw) {
+  const memberName = String(nameRaw || '').trim();
+  if (!memberName) return null;
+
+  const [rows] = await con.execute(
+    `
+      SELECT
+        p.player_id,
+        p.current_name,
+        p.current_rank_code,
+        COALESCE(pid.discord_user_id, puld.discord_user_id) AS discord_user_id,
+        COALESCE(puld.discord_username, dpc.discord_username) AS discord_username,
+        COALESCE(puld.discord_avatar, dpc.discord_avatar) AS discord_avatar
+      FROM players p
+      LEFT JOIN (
+        SELECT alliance, player_id, MIN(discord_user_id) AS discord_user_id
+        FROM player_identities
+        WHERE discord_user_id IS NOT NULL
+        GROUP BY alliance, player_id
+      ) pid ON pid.alliance = p.alliance AND pid.player_id = p.player_id
+      LEFT JOIN (
+        SELECT pul.alliance, pul.player_id, MIN(uda.discord_user_id) AS discord_user_id,
+               MIN(uda.discord_username) AS discord_username,
+               MIN(uda.discord_avatar) AS discord_avatar
+        FROM player_user_links pul
+        JOIN user_discord_accounts uda
+          ON uda.alliance = pul.alliance AND uda.user_id = pul.user_id
+        GROUP BY pul.alliance, pul.player_id
+      ) puld ON puld.alliance = p.alliance AND puld.player_id = p.player_id
+      LEFT JOIN discord_profile_cache dpc
+        ON dpc.alliance = p.alliance
+       AND dpc.discord_user_id = COALESCE(pid.discord_user_id, puld.discord_user_id)
+      WHERE p.alliance = ?
+        AND p.is_active = 1
+        AND LOWER(TRIM(p.current_name)) = LOWER(TRIM(?))
+      LIMIT 1
+    `,
+    [ALLIANCE, memberName]
+  );
+
   return rows[0] || null;
 }
 
@@ -310,13 +360,137 @@ async function verifyDiscord(con, discordIdRaw) {
   }
   if (!discordId) return json(200, { ok: false, error: 'Discord-ID fehlt' });
 
-  const member = await getDiscordAccessMember(con, discordId);
+  await ensureDiscordProfileCacheTable(con);
+  const member = await getDiscordMember(con, discordId);
   if (!member) return json(200, { ok: false, error: 'Kein Zugriff' });
+
+  const rank = safeRank(member.current_rank_code);
 
   return json(200, {
     ok: true,
+    member_id: member.player_id,
     member_name: member.current_name,
-    role: roleFromRank(member.current_rank_code)
+    rank,
+    role: roleFromRank(rank),
+    can_manage: rank >= 4,
+    discord_id: member.discord_user_id,
+    discord_username: member.discord_username || null,
+    discord_avatar: member.discord_avatar || null,
+    discord_avatar_url: member.discord_user_id && member.discord_avatar
+      ? `https://cdn.discordapp.com/avatars/${member.discord_user_id}/${member.discord_avatar}.png?size=128`
+      : null
+  });
+}
+
+async function getMemberHistory(con, identity = {}, queryParams = {}) {
+  const memberName = String(identity.name || '').trim();
+  const discordIdRaw = identity.discordId;
+  let discordId = '';
+  if (discordIdRaw != null && String(discordIdRaw).trim()) {
+    try {
+      discordId = normalizeDiscordId(discordIdRaw);
+    } catch (err) {
+      return json(400, { error: err.message });
+    }
+  }
+
+  if (!discordId && !memberName) {
+    return json(400, { error: 'Discord-ID oder Name fehlt' });
+  }
+
+  await ensureDiscordProfileCacheTable(con);
+  const member = discordId ? await getDiscordMember(con, discordId) : await getMemberByName(con, memberName);
+  if (!member) return json(404, { error: 'Mitglied nicht gefunden' });
+
+  const rawLimit = Number.parseInt((queryParams || {}).limit, 10);
+  const limit = Number.isFinite(rawLimit) ? Math.max(1, Math.min(52, rawLimit)) : 16;
+
+  const [entryRows] = await con.execute(
+    `
+      SELECT
+        entry_id,
+        year_week,
+        base_rank_code,
+        final_rank_code,
+        afk,
+        updated_at
+      FROM weekly_entries
+      WHERE alliance = ? AND player_id = ?
+      ORDER BY year_week DESC
+      LIMIT ?
+    `,
+    [ALLIANCE, member.player_id, limit]
+  );
+
+  const weeks = [];
+  for (const row of entryRows) {
+    const [flagRows] = await con.execute(
+      `
+        SELECT flag_key
+        FROM weekly_entry_flags
+        WHERE alliance = ? AND entry_id = ?
+      `,
+      [ALLIANCE, row.entry_id]
+    );
+
+    const flags = {};
+    for (const flagRow of flagRows) flags[flagRow.flag_key] = true;
+
+    weeks.push({
+      year_week: row.year_week,
+      base_rank: safeRank(row.base_rank_code),
+      final_rank: safeRank(row.final_rank_code),
+      afk: !!row.afk,
+      updated_at: row.updated_at,
+      flags
+    });
+  }
+
+  await ensureRankChangeLogTable(con);
+  const [changeRows] = await con.execute(
+    `
+      SELECT
+        old_rank_code,
+        requested_rank_code,
+        applied_rank_code,
+        source,
+        is_blocked,
+        reason,
+        created_at
+      FROM rank_change_log
+      WHERE alliance = ? AND player_id = ?
+      ORDER BY created_at DESC
+      LIMIT 25
+    `,
+    [ALLIANCE, member.player_id]
+  );
+
+  const rank = safeRank(member.current_rank_code);
+  return json(200, {
+    ok: true,
+    member: {
+      id: member.player_id,
+      name: member.current_name,
+      rank,
+      role: roleFromRank(rank),
+      can_manage: rank >= 4,
+      discord_id: member.discord_user_id,
+      discord_username: member.discord_username || null,
+      discord_avatar: member.discord_avatar || null,
+      discord_avatar_url: member.discord_user_id && member.discord_avatar
+        ? `https://cdn.discordapp.com/avatars/${member.discord_user_id}/${member.discord_avatar}.png?size=128`
+        : null
+    },
+    weeks,
+    rank_changes: changeRows.map((row) => ({
+      old_rank: Number.isFinite(Number.parseInt(row.old_rank_code, 10)) ? Number.parseInt(row.old_rank_code, 10) : null,
+      requested_rank: Number.isFinite(Number.parseInt(row.requested_rank_code, 10)) ? Number.parseInt(row.requested_rank_code, 10) : null,
+      applied_rank: safeRank(row.applied_rank_code),
+      source: row.source,
+      is_blocked: !!row.is_blocked,
+      reason: row.reason || null,
+      created_at: row.created_at
+    }))
   });
 }
 
@@ -1025,6 +1199,12 @@ exports.handler = async function handler(event) {
     if (event.httpMethod === 'GET' && route === '/verify-discord') {
       const discordId = (event.queryStringParameters || {}).discord_id;
       return await verifyDiscord(con, discordId);
+    }
+
+    if (event.httpMethod === 'GET' && route === '/member-history') {
+      const discordId = (event.queryStringParameters || {}).discord_id;
+      const name = (event.queryStringParameters || {}).name;
+      return await getMemberHistory(con, { discordId, name }, event.queryStringParameters || {});
     }
 
     if (event.httpMethod === 'POST' && route === '/discord-profile-cache') {

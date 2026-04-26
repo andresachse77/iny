@@ -55,6 +55,39 @@ nav {
 .sync-btn { background: var(--card2); border: 1px solid var(--line2); border-radius: 8px; padding: 5px 10px; font-size: 16px; cursor: pointer; color: var(--soft); transition: all 0.2s; }
 .sync-btn:hover { color: var(--gold); border-color: var(--gold); }
 .sync-btn.spinning { animation: spin 0.8s linear infinite; pointer-events: none; }
+.nav-actions { display: flex; align-items: center; gap: 8px; }
+.nav-link-btn {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, rgba(240,165,0,0.18), rgba(255,208,96,0.08));
+  color: var(--gold2);
+  border: 1px solid rgba(240,165,0,0.25);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Inter', sans-serif;
+}
+.nav-link-btn:hover { border-color: var(--gold); color: var(--gold); transform: translateY(-1px); }
+.nav-help-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(74,158,255,0.12);
+  color: #8ebeff;
+  border: 1px solid rgba(74,158,255,0.28);
+  border-radius: 8px;
+  padding: 6px 11px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Inter', sans-serif;
+}
+.nav-help-btn:hover { border-color: var(--blue); color: #b7d4ff; }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
 /* ── LOGIN ── */
@@ -66,6 +99,20 @@ nav {
 .login-box .discord-btn { display:inline-flex; align-items:center; gap:10px; background:#5865F2; color:#fff; border:none; border-radius:8px; padding:12px 28px; font-size:15px; font-weight:600; cursor:pointer; transition:background 0.2s; font-family:'Inter',sans-serif; }
 .login-box .discord-btn:hover { background:#4752C4; }
 .login-box .discord-btn svg { width:24px; height:24px; }
+.login-help-link {
+  margin-top: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 14px;
+  font-size: 12px;
+  border-radius: 8px;
+  color: var(--blue);
+  border: 1px solid rgba(74,158,255,0.35);
+  background: rgba(74,158,255,0.08);
+  cursor: pointer;
+}
+.login-help-link:hover { color: #9ec8ff; border-color: var(--blue); }
 .login-denied { color:var(--red); margin-top:1rem; font-size:13px; display:none; }
 .login-user { display:flex; align-items:center; gap:10px; justify-content:center; margin-bottom:1rem; }
 .login-user img { width:40px; height:40px; border-radius:50%; }
@@ -82,6 +129,22 @@ nav {
 .login-request .row { margin-bottom:8px; }
 .login-request .send { width:100%; background:var(--gold); border:none; color:#000; font-weight:700; border-radius:8px; padding:9px 12px; cursor:pointer; }
 .login-request .send:hover { background:var(--gold2); }
+.login-pending {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.login-spinner {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 3px solid rgba(255,255,255,0.08);
+  border-top-color: var(--gold);
+  animation: spin 0.85s linear infinite;
+}
+.login-pending strong { font-size: 15px; color: var(--text); }
+.login-pending span { font-size: 12px; color: var(--soft); line-height: 1.5; }
 #logout-btn { position:fixed; bottom:12px; right:12px; z-index:200; background:var(--card2); border:1px solid var(--line2); border-radius:8px; padding:6px 14px; font-size:12px; color:var(--soft); cursor:pointer; font-family:'Inter',sans-serif; }
 #logout-btn:hover { color:var(--red); border-color:var(--red); }
 .kw-wrap { display: flex; align-items: center; gap: 6px; background: var(--card2); border: 1px solid var(--line2); border-radius: 8px; padding: 5px 12px; }
@@ -133,6 +196,16 @@ nav {
 .warn-row:last-child { border-bottom: none; }
 .avatar { width: 30px; height: 30px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-family: 'Rajdhani', sans-serif; font-size: 12px; font-weight: 700; flex-shrink: 0; }
 .warn-name { font-size: 13px; font-weight: 500; flex: 1; }
+.member-jump {
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+.member-jump:hover { color: var(--gold2); }
 .tags { display: flex; gap: 4px; flex-wrap: wrap; }
 .tag { font-size: 10px; padding: 2px 7px; border-radius: 4px; }
 .tag.r { background: rgba(224,85,69,0.15); color: #f09080; border: 1px solid rgba(224,85,69,0.3); }
@@ -382,6 +455,7 @@ nav {
     overflow-x: auto;
     white-space: nowrap;
   }
+  .nav-actions { margin-left: auto; }
   .tab { padding: 6px 12px; }
 }
 
@@ -403,12 +477,13 @@ nav {
 <div id="login-screen">
   <div class="login-box" id="login-box">
     <div class="logo">INY <em>RANKING</em></div>
-    <p>Zugriff nur für R4+ Mitglieder</p>
+    <p>Login für verknüpfte INY-Mitglieder</p>
     <button class="discord-btn" onclick="discordLogin()">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
       Login mit Discord
     </button>
-    <div class="login-denied" id="login-denied">Kein Zugriff – du bist nicht als R4+ eingetragen.</div>
+    <button class="login-help-link" type="button" onclick="goToPointsGuide()">Punkte-Erklaerung</button>
+    <div class="login-denied" id="login-denied">Kein Zugriff – dein Discord ist noch keinem Mitglied zugeordnet.</div>
   </div>
 </div>
 
@@ -422,7 +497,11 @@ nav {
     <button class="tab" id="tab-w" onclick="showPage('w')">Events</button>
     <button class="tab" id="tab-v" onclick="showPage('v')">Verwaltung</button>
   </div>
-  <button class="sync-btn" id="btn-sync" onclick="syncData()" title="Daten neu laden">🔄</button>
+  <div class="nav-actions">
+    <button class="nav-help-btn" id="btn-guide" type="button" onclick="goToPointsGuide()">Punkte-Guide</button>
+    <button class="nav-link-btn" id="btn-me" type="button" onclick="goToMe()">Mein Bereich</button>
+    <button class="sync-btn" id="btn-sync" onclick="syncData()" title="Daten neu laden">🔄</button>
+  </div>
   <div class="kw-nav">
     <button class="kw-btn" type="button" onclick="changeYearWeek(-1)" title="Vorherige Woche">‹</button>
     <div class="kw-wrap">
@@ -670,7 +749,110 @@ const DISCORD_CLIENT_ID = '1494427568361967626';
 const DISCORD_REDIRECT = window.location.origin + window.location.pathname;
 const DISCORD_AUTH_URL = `https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&response_type=token&scope=identify&redirect_uri=${encodeURIComponent(DISCORD_REDIRECT)}`;
 const IS_LOCAL_PREVIEW = window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const AUTH_STATE_KEY = 'iny_auth_state_v1';
+const AUTH_WAIT_MIN_MS = 700;
+const LOCAL_DEV_MEMBER_NAME = 'Lion Tooth';
 let currentDiscordUser = null;
+let authMember = null;
+
+function getSiblingPageUrl(fileName) {
+  const url = new URL(window.location.href);
+  url.search = '';
+  url.hash = '';
+  if (url.pathname.endsWith('/')) {
+    url.pathname = `${url.pathname}${fileName}`;
+  } else {
+    url.pathname = url.pathname.replace(/[^/]*$/, fileName);
+  }
+  return url.toString();
+}
+
+function readAuthState() {
+  try {
+    const raw = localStorage.getItem(AUTH_STATE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeAuthState(state) {
+  authMember = state;
+  localStorage.setItem(AUTH_STATE_KEY, JSON.stringify(state));
+}
+
+function clearAuthState() {
+  authMember = null;
+  localStorage.removeItem(AUTH_STATE_KEY);
+}
+
+function updateMeButton() {
+  const button = document.getElementById('btn-me');
+  if (!button) return;
+  button.style.display = authMember ? 'inline-flex' : 'none';
+}
+
+function goToMe() {
+  window.location.href = getSiblingPageUrl('me.html');
+}
+window.goToMe = goToMe;
+
+function goToPointsGuide() {
+  window.location.href = getSiblingPageUrl('punkte.html');
+}
+window.goToPointsGuide = goToPointsGuide;
+
+function openMemberMe(name) {
+  const targetName = String(name || '').trim();
+  if (!targetName) return;
+  const targetUrl = new URL(getSiblingPageUrl('me.html'));
+  targetUrl.searchParams.set('member', targetName);
+  window.location.href = targetUrl.toString();
+}
+window.openMemberMe = openMemberMe;
+
+function renderLoginPending(cachedState) {
+  const memberName = cachedState?.member_name || cachedState?.discord_username || 'dein Account';
+  document.getElementById('login-box').innerHTML = `
+    <div class="login-pending">
+      <div class="logo">INY <em>RANKING</em></div>
+      <div class="login-spinner"></div>
+      <strong>Bekannte Anmeldung gefunden</strong>
+      <span>Prüfe gerade ${escHtml(memberName)}. Wenn dein Discord-Login noch gültig ist, geht es automatisch weiter.</span>
+    </div>
+  `;
+}
+
+function buildLocalAuthState(name) {
+  const rank = R5.has(name) ? 5 : R4.has(name) ? 4 : (PREV[name] || 3);
+  const meta = memberMeta[name] || {};
+  return {
+    discord_id: meta.discordId || null,
+    discord_username: meta.discordUsername || 'local-dev',
+    member_id: meta.id || null,
+    member_name: name,
+    rank,
+    role: rank >= 5 ? 'r5' : rank >= 4 ? 'r4' : 'normal',
+    can_manage: rank >= 4,
+    discord_avatar: null,
+    discord_avatar_url: getEffectiveAvatarUrl(meta),
+    checked_at: new Date().toISOString(),
+    local_preview: true
+  };
+}
+
+function ensureLocalPreviewAuth() {
+  const targetName = members.find((memberName) => memberName.toLowerCase() === LOCAL_DEV_MEMBER_NAME.toLowerCase());
+  if (!targetName) {
+    clearAuthState();
+    toast(`Lokaler Testnutzer nicht gefunden: ${LOCAL_DEV_MEMBER_NAME}`);
+    return null;
+  }
+  const localState = buildLocalAuthState(targetName);
+  writeAuthState(localState);
+  updateMeButton();
+  return localState;
+}
 
 function discordLogin() {
   window.location.href = DISCORD_AUTH_URL;
@@ -679,6 +861,7 @@ function discordLogin() {
 function discordLogout() {
   localStorage.removeItem('discord_token');
   localStorage.removeItem('discord_user');
+  clearAuthState();
   window.location.reload();
 }
 
@@ -693,7 +876,7 @@ function renderAccessDenied(user, reason = 'Kein Zugriff') {
       <img src="${avatarUrl}" alt="">
       <span>${safeUsername}</span>
     </div>
-    <div style="color:var(--red);font-size:13px;margin-bottom:1rem;">${escHtml(reason)} – du bist aktuell nicht als R4/R5 zugewiesen.</div>
+    <div style="color:var(--red);font-size:13px;margin-bottom:1rem;">${escHtml(reason)} – dein Discord ist aktuell noch keinem aktiven Mitglied zugeordnet.</div>
     <button class="discord-btn" style="background:var(--card2);font-size:13px;padding:8px 20px;" onclick="discordLogout()">Anderer Account</button>
     <div class="login-request" id="login-request-box">
       <div class="title">Keinen Zugriff? Anfrage senden</div>
@@ -742,6 +925,7 @@ async function submitAccessRequest() {
 window.submitAccessRequest = submitAccessRequest;
 
 async function checkDiscordAuth() {
+  const startedAt = Date.now();
   // 1. Token aus URL-Hash lesen (nach Redirect von Discord)
   const hash = window.location.hash;
   if (hash.includes('access_token')) {
@@ -752,7 +936,10 @@ async function checkDiscordAuth() {
   }
 
   const token = localStorage.getItem('discord_token');
-  if (!token) return false;
+  if (!token) {
+    clearAuthState();
+    return false;
+  }
 
   // 2. Discord User-Info holen
   try {
@@ -761,18 +948,39 @@ async function checkDiscordAuth() {
     });
     if (!res.ok) {
       localStorage.removeItem('discord_token');
+      clearAuthState();
       return false;
     }
     const user = await res.json();
     currentDiscordUser = user;
     localStorage.setItem('discord_user', JSON.stringify(user));
 
-    // 3. Serverseitig pruefen, ob Discord-ID einem aktiven R4/R5 zugewiesen ist
+    // 3. Serverseitig pruefen, ob Discord-ID einem aktiven Mitglied zugewiesen ist
     const verify = await api('verify_discord', { discord_id: user.id });
     if (!verify || !verify.ok) {
+      clearAuthState();
       renderAccessDenied(user, verify?.error || 'Kein Zugriff');
       return false;
     }
+
+    const elapsed = Date.now() - startedAt;
+    if (elapsed < AUTH_WAIT_MIN_MS) {
+      await new Promise((resolve) => setTimeout(resolve, AUTH_WAIT_MIN_MS - elapsed));
+    }
+
+    writeAuthState({
+      discord_id: user.id,
+      discord_username: user.username || user.global_name || null,
+      member_id: verify.member_id || null,
+      member_name: verify.member_name || null,
+      rank: verify.rank || null,
+      role: verify.role || 'normal',
+      can_manage: !!verify.can_manage,
+      discord_avatar: verify.discord_avatar || user.avatar || null,
+      discord_avatar_url: verify.discord_avatar_url || null,
+      checked_at: new Date().toISOString()
+    });
+    updateMeButton();
 
     // Avatar/Profil-Cache asynchron nachziehen, ohne den Login zu verzoegern.
     apiPost({
@@ -782,9 +990,10 @@ async function checkDiscordAuth() {
       discordAvatar: user.avatar || null
     }).catch(() => {});
 
-    return true;
+    return verify;
   } catch (e) {
     localStorage.removeItem('discord_token');
+    clearAuthState();
     return false;
   }
 }
@@ -1420,9 +1629,10 @@ function renderDashboard(){
       const wf=dk.filter(k=>e.flags[k]);
       const col=RC[e.rank]||'#888';
       const ini=e.name.split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase();
+      const escName = e.name.replace(/'/g, "\\'");
       return `<div class="warn-row">
         <div class="avatar" style="background:${col}20;color:${col};border:1px solid ${col}40;">${ini}</div>
-        <div style="flex:1"><div class="warn-name">${e.name}</div>
+        <div style="flex:1"><div class="warn-name"><button class="member-jump" type="button" onclick="openMemberMe('${escName}')">${e.name}</button></div>
         <div class="tags">${wf.map(k=>`<span class="tag r">${LBL[k]||k}</span>`).join('')}</div></div>
       </div>`;
     }).join('');
@@ -1436,9 +1646,10 @@ function renderDashboard(){
     ?'<div class="empty" style="padding:0.5rem 0;">Noch keine Einträge.</div>'
     :sc.slice(0,8).map((e,i)=>{
       const br=isFixed(e.name)?fixedRank(e.name):(PREV[e.name]||3);
+      const escName = e.name.replace(/'/g, "\\'");
       return `<div class="top-row">
       <div class="top-pos ${i===0?'p1':i===1?'p2':i===2?'p3':''}">${i+1}</div>
-      <div class="top-name">${e.name}</div>
+      <div class="top-name"><button class="member-jump" type="button" onclick="openMemberMe('${escName}')">${e.name}</button></div>
       <div class="rank-badge ${rbClass(br)}">${br} · ${RL[br]}</div>
     </div>`;}).join('');
 
@@ -1507,9 +1718,10 @@ function renderTable(){
       :r.hasWarn
       ?`<span class="sdot sd-warn"></span><span style="color:var(--red);font-size:12px;">Warnung</span>`
       :`<span class="sdot sd-ok"></span><span style="color:var(--green);font-size:12px;">OK</span>`;
+    const escName = r.name.replace(/'/g, "\\'");
     return `<tr class="${r.hasEntry?'':'dim'}">
       <td style="font-family:'Rajdhani',sans-serif;font-weight:700;color:var(--softer);">${r.hasEntry?pos:'·'}</td>
-      <td style="font-weight:500;">${r.name}${isFixed(r.name)?` <span style="font-size:10px;color:var(--gold);">${R5.has(r.name)?'R5':'R4'}</span>`:''}</td>
+      <td style="font-weight:500;"><button class="member-jump" type="button" onclick="openMemberMe('${escName}')">${r.name}</button>${isFixed(r.name)?` <span style="font-size:10px;color:var(--gold);">${R5.has(r.name)?'R5':'R4'}</span>`:''}</td>
       <td>${rb}</td><td>${th}</td><td><div style="display:flex;gap:4px;flex-wrap:wrap;">${fh}</div></td><td>${sh}</td>
     </tr>`;
   }).join('');
@@ -2117,6 +2329,9 @@ window.syncData = syncData;
 
 // ── INIT ──
 async function initApp(){
+  authMember = readAuthState();
+  updateMeButton();
+
   if (!API_BASE_CANDIDATES.length) {
     document.getElementById('login-screen').style.display = 'flex';
     document.getElementById('login-box').innerHTML = `
@@ -2131,23 +2346,39 @@ async function initApp(){
   }
 
   if (!IS_LOCAL_PREVIEW) {
+    const hasStoredToken = !!localStorage.getItem('discord_token');
+    if (hasStoredToken) {
+      renderLoginPending(authMember || readAuthState());
+      document.getElementById('login-screen').style.display = 'flex';
+    }
+
     // Discord Auth nur online prüfen
-    const authed = await checkDiscordAuth();
-    if (!authed) {
+    const authResult = await checkDiscordAuth();
+    if (!authResult) {
       document.getElementById('login-screen').style.display = 'flex';
       return;
     }
 
     document.getElementById('logout-btn').style.display = 'block';
+
+    if (!authResult.can_manage) {
+      window.location.replace(getSiblingPageUrl('me.html'));
+      return;
+    }
   }
 
   // Lokal (F5/file://localhost) ohne Discord-Login starten
   document.getElementById('login-screen').style.display = 'none';
   try {
     await loadMembers();
+    const localAuth = ensureLocalPreviewAuth();
     await loadEntries();
     await loadAccessRequests();
     renderAll();
+    if (localAuth && !localAuth.can_manage) {
+      window.location.replace(getSiblingPageUrl('me.html'));
+      return;
+    }
   } catch(e) {
     toast('Fehler beim Laden: ' + e.message);
   }
