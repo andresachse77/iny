@@ -67,6 +67,14 @@ function isOptionalRankLogError(err) {
   ].includes(err?.code);
 }
 
+function isOptionalHistoryError(err) {
+  return [
+    'ER_NO_SUCH_TABLE',
+    'ER_TABLEACCESS_DENIED_ERROR',
+    'ER_BAD_FIELD_ERROR'
+  ].includes(err?.code);
+}
+
 async function ensureRankChangeLogTable(con) {
   await con.execute(
     `
@@ -483,33 +491,71 @@ async function getMemberHistory(con, identity = {}, queryParams = {}) {
   const rawLimit = Number.parseInt((queryParams || {}).limit, 10);
   const limit = Number.isFinite(rawLimit) ? Math.max(1, Math.min(52, rawLimit)) : 16;
 
-  const [entryRows] = await con.execute(
-    `
-      SELECT
-        entry_id,
-        year_week,
-        base_rank_code,
-        final_rank_code,
-        afk,
-        updated_at
-      FROM weekly_entries
-      WHERE alliance = ? AND player_id = ?
-      ORDER BY year_week DESC
-      LIMIT ?
-    `,
-    [ALLIANCE, member.player_id, limit]
-  );
+  let entryRows = [];
+  try {
+    const [rows] = await con.execute(
+      `
+        SELECT
+          entry_id,
+          year_week,
+          base_rank_code,
+          final_rank_code,
+          afk,
+          updated_at
+        FROM weekly_entries
+        WHERE alliance = ? AND player_id = ?
+        ORDER BY year_week DESC
+        LIMIT ?
+      `,
+      [ALLIANCE, member.player_id, limit]
+    );
+    entryRows = rows;
+  } catch (err) {
+    if (!isOptionalHistoryError(err)) throw err;
+
+    if (err?.code === 'ER_BAD_FIELD_ERROR') {
+      try {
+        const [rowsLegacy] = await con.execute(
+          `
+            SELECT
+              entry_id,
+              year_week,
+              final_rank_code,
+              NULL AS updated_at
+            FROM weekly_entries
+            WHERE alliance = ? AND player_id = ?
+            ORDER BY year_week DESC
+            LIMIT ?
+          `,
+          [ALLIANCE, member.player_id, limit]
+        );
+        entryRows = rowsLegacy.map((row) => ({
+          ...row,
+          base_rank_code: row.final_rank_code,
+          afk: 0
+        }));
+      } catch (legacyErr) {
+        if (!isOptionalHistoryError(legacyErr)) throw legacyErr;
+      }
+    }
+  }
 
   const weeks = [];
   for (const row of entryRows) {
-    const [flagRows] = await con.execute(
-      `
-        SELECT flag_key
-        FROM weekly_entry_flags
-        WHERE alliance = ? AND entry_id = ?
-      `,
-      [ALLIANCE, row.entry_id]
-    );
+    let flagRows = [];
+    try {
+      const [rows] = await con.execute(
+        `
+          SELECT flag_key
+          FROM weekly_entry_flags
+          WHERE alliance = ? AND entry_id = ?
+        `,
+        [ALLIANCE, row.entry_id]
+      );
+      flagRows = rows;
+    } catch (err) {
+      if (!isOptionalHistoryError(err)) throw err;
+    }
 
     const flags = {};
     for (const flagRow of flagRows) flags[flagRow.flag_key] = true;
